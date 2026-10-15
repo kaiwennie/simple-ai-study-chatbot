@@ -1,0 +1,25 @@
+MODUL EKONOMI: INFLASI DAN KEBIJAKAN MONETER
+
+1. Definisi Inflasi
+Inflasi adalah suatu keadaan perekonomian di mana harga-harga barang dan jasa secara umum mengalami kenaikan secara terus-menerus dalam periode waktu tertentu. Kenaikan harga satu atau dua barang saja tidak dapat disebut inflasi kecuali kenaikan tersebut meluas ke barang lainnya.
+
+2. Faktor Penyebab Inflasi
+A. Demand-Pull Inflation (Tarikan Permintaan): Terjadi karena kenaikan permintaan agregat masyarakat yang melebihi kapasitas produksi barang yang tersedia.
+B. Cost-Push Inflation (Dorongan Biaya): Terjadi akibat kenaikan biaya produksi, misalnya kenaikan harga bahan bakar minyak (BBM), upah tenaga kerja, atau bahan baku impor.
+C. Imported Inflation: Inflasi yang bersumber dari luar negeri akibat kenaikan harga barang impor dari negara mitra dagang.
+
+3. Tingkat Keparahan Inflasi
+- Inflasi Ringan: Kurang dari 10% per tahun (masih wajar dan memacu gairah usaha).
+- Inflasi Sedang: Berkisar antara 10% - 30% per tahun.
+- Inflasi Berat: Berkisar antara 30% - 100% per tahun.
+- Hiperinflasi: Melebihi 100% per tahun (merusak tatanan perekonomian suatu negara).
+
+4. Kebijakan Mengatasi Inflasi
+A. Kebijakan Moneter (oleh Bank Sentral / Bank Indonesia):
+- Kebijakan Diskonto: Menaikkan suku bunga acuan (BI-Rate) agar masyarakat lebih giat menabung dan mengurangi jumlah uang beredar.
+- Operasi Pasar Terbuka: Menjual Sertifikat Bank Indonesia (SBI) untuk menyerap likuiditas uang beredar di masyarakat.
+- Kebijakan Cadangan Kas (Cash Ratio): Menaikkan persentase cadangan kas minimum di bank umum.
+
+B. Kebijakan Fiskal (oleh Pemerintah):
+- Mengurangi pengeluaran/belanja negara.
+- Menaikkan tarif pajak untuk menurunkan daya beli konsumtif masyarakat.

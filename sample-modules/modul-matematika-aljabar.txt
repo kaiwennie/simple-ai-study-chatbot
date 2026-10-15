@@ -1,0 +1,40 @@
+MODUL PEMBELAJARAN: MATEMATIKA - ALJABAR DAN FUNGSI KUADRAT
+
+1. Pengertian Bentuk Aljabar
+Bentuk aljabar adalah teknik matematika yang memuat variabel (peubah), koefisien, dan konstanta.
+- Variabel: Simbol (biasanya huruf x, y, z) yang mewakili nilai yang belum diketahui.
+- Koefisien: Angka pengali yang menyertai variabel (misal 5x, maka 5 adalah koefisien).
+- Konstanta: Angka tetap yang berdiri sendiri tanpa variabel (misal 5x + 7, maka 7 adalah konstanta).
+
+2. Persamaan Kuadrat
+Bentuk umum persamaan kuadrat satu variabel adalah:
+ax² + bx + c = 0, dengan syarat a ≠ 0.
+Metode penyelesaian:
+A. Pemfaktoran: Mengubah ax² + bx + c menjadi bentuk (x - p)(x - q) = 0.
+B. Melengkapkan Kuadrat Sempurna: Mengubah bentuk menjadi (x + p)² = q.
+C. Rumus Kuadratik (Rumus ABC):
+x = (-b ± √(b² - 4ac)) / (2a)
+
+3. Diskriminan (D)
+Nilai diskriminan menentukan jenis akar-akar persamaan kuadrat:
+Rumus: D = b² - 4ac
+- Jika D > 0: Memiliki 2 akar nyata (real) yang berbeda.
+- Jika D = 0: Memiliki 2 akar nyata yang kembar / sama.
+- Jika D < 0: Tidak memiliki akar nyata (akar imajiner / tidak memotong sumbu X).
+
+4. Fungsi Kuadrat dan Grafiknya
+Bentuk umum: f(x) = ax² + bx + c
+Grafik fungsi kuadrat berbentuk parabola.
+- Jika a > 0, kurva terbuka ke atas (memiliki titik balik minimum).
+- Jika a < 0, kurva terbuka ke bawah (memiliki titik balik maksimum).
+- Sumbu simetri: x = -b / (2a)
+- Nilai optimum: y = -D / (4a)
+- Titik puncak parabola: P(-b / (2a), -D / (4a))
+
+5. Contoh Soal dan Pembahasan
+Soal: Tentukan akar-akar dari x² - 5x + 6 = 0!
+Penyelesaian:
+Cari dua bilangan yang jika dikalikan menghasilkan 6 dan jika dijumlahkan menghasilkan -5.
+Bilangan tersebut adalah -2 dan -3.
+Maka bentuk faktornya: (x - 2)(x - 3) = 0
+Sehingga akarnya: x1 = 2 atau x2 = 3.
