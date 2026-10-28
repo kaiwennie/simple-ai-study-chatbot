@@ -87,10 +87,16 @@
         </div>
 
         <div class="header-actions">
-          <!-- Rangkum Chat Button -->
-          <button id="btn-summarize-chat" class="btn-header-action btn-summarize" title="Rangkum poin-poin penting materi & obrolan">
+          <!-- Review Materi Button -->
+          <button id="btn-summarize-chat" class="btn-header-action btn-summarize" title="Review intisari materi pembelajaran yang telah dibahas">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-            <span>Rangkum Chat & Modul</span>
+            <span>Review Materi</span>
+          </button>
+
+          <!-- Quiz Button -->
+          <button id="btn-open-quiz-view" class="btn-header-action btn-quiz" title="Buka kuis interaktif pilihan ganda terkait modul">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+            <span>Quiz</span>
           </button>
 
           <!-- View Raw Module Button -->
@@ -98,40 +104,206 @@
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
             <span>Teks Modul</span>
           </button>
+
+          <!-- AI & Flexibility Settings Button -->
+          <button id="btn-open-settings" class="btn-header-action" title="Pengaturan AI & Fleksibilitas Modul">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+            <span>Mode AI</span>
+          </button>
         </div>
       </header>
 
-      <!-- Message History Container -->
-      <section class="messages-container" id="messages-container">
-        <!-- Rendered dynamically -->
-      </section>
+      <!-- Chat Flow View Wrapper -->
+      <div id="chat-flow-view" class="chat-flow-wrapper">
+        <!-- Message History Container -->
+        <section class="messages-container" id="messages-container">
+          <!-- Rendered dynamically -->
+        </section>
 
-      <!-- Typing Indicator -->
-      <div class="typing-indicator" id="typing-indicator">
-        <div class="typing-dot"></div>
-        <div class="typing-dot"></div>
-        <div class="typing-dot"></div>
-        <span style="font-size: 0.78rem; color: var(--text-dim); margin-left: 6px;">EduBot sedang berpikir...</span>
+        <!-- Typing Indicator -->
+        <div class="typing-indicator" id="typing-indicator">
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+          <div class="typing-dot"></div>
+          <span style="font-size: 0.78rem; color: var(--text-dim); margin-left: 6px;">Guru sedang menyusun penjelasan...</span>
+        </div>
+
+        <!-- Chat Input Area -->
+        <div class="chat-input-area">
+          <div class="input-container">
+            <textarea 
+              id="chat-input" 
+              class="chat-textarea" 
+              placeholder="Tanyakan materi modul, sains, rumus, atau topik apapun secara bebas... (Tekan Enter untuk kirim)" 
+              rows="1"></textarea>
+            <div class="input-actions">
+              <button id="btn-send-message" class="btn-send" title="Kirim Pertanyaan" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="input-hint">
+            <span>Tekan <strong>Enter</strong> untuk mengirim &bull; <strong>Shift + Enter</strong> untuk baris baru</span>
+          </div>
+        </div>
       </div>
 
-      <!-- Chat Input Area -->
-      <div class="chat-input-area">
-        <div class="input-container">
-          <textarea 
-            id="chat-input" 
-            class="chat-textarea" 
-            placeholder="Tanyakan konsep, rumus, atau bagian dari modul ini... (Tekan Enter untuk kirim)" 
-            rows="1"></textarea>
-          <div class="input-actions">
-            <button id="btn-send-message" class="btn-send" title="Kirim Pertanyaan" disabled>
-              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+      <!-- Interactive Quiz Page View -->
+      <section id="quiz-page-view" class="quiz-page-view" style="display: none;">
+        <!-- Quiz Navigation Header -->
+        <div class="quiz-page-nav">
+          <button id="btn-quiz-back-chat" class="btn-quiz-back" title="Kembali ke Ruang Chat AI">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"/></svg>
+            <span>Kembali ke Chat AI</span>
+          </button>
+          <div class="quiz-nav-info">
+            <span class="quiz-module-badge" id="quiz-badge-module">Modul Belajar</span>
+            <span class="quiz-nav-title" id="quiz-header-title">Kuis Pilihan Ganda</span>
+          </div>
+        </div>
+
+        <!-- 1. SETUP PANEL (Konfigurasi Jumlah Soal) -->
+        <div id="quiz-setup-panel" class="quiz-panel quiz-setup-panel">
+          <div class="quiz-welcome-card">
+            <div class="quiz-welcome-icon">🎯</div>
+            <h2>Kuis Pilihan Ganda Interaktif</h2>
+            <p>Uji pemahamanmu secara mendalam terhadap materi modul ini. Soal disusun otomatis dan kuis ini dapat diulang-ulang (Try Again) dengan kombinasi soal acak setiap kali dicoba.</p>
+
+            <div class="quiz-config-section">
+              <label class="quiz-config-label">Pilih Jumlah Pertanyaan:</label>
+              <div class="quiz-count-selector" id="quiz-count-selector">
+                <button type="button" class="btn-count-opt" data-count="3">3 Pertanyaan <small>(Cepat)</small></button>
+                <button type="button" class="btn-count-opt active" data-count="5">5 Pertanyaan <small>(Rekomendasi)</small></button>
+                <button type="button" class="btn-count-opt" data-count="10">10 Pertanyaan <small>(Mendalam)</small></button>
+              </div>
+              <div class="quiz-custom-input-row">
+                <span class="quiz-custom-input-label">Atau tentukan jumlah soal sendiri:</span>
+                <div class="quiz-custom-input-wrapper">
+                  <input type="number" id="quiz-custom-count" class="quiz-custom-input" min="1" max="50" placeholder="Ketik angka..." value="5">
+                  <span class="quiz-custom-unit">soal</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Quiz Timer Configuration Card -->
+            <div class="quiz-timer-config-card">
+              <div class="quiz-timer-toggle-row">
+                <div class="quiz-timer-info">
+                  <div class="quiz-timer-title-row">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <strong>Batas Waktu Pengerjaan (Timer)</strong>
+                  </div>
+                  <p class="quiz-timer-desc">Aktifkan batas waktu untuk melatih kecepatan berpikir dan konsentrasi Anda.</p>
+                </div>
+                <label class="quiz-toggle-switch">
+                  <input type="checkbox" id="quiz-timer-toggle">
+                  <span class="quiz-toggle-slider"></span>
+                </label>
+              </div>
+
+              <!-- Pilihan Durasi Timer (Hanya tampil bila toggle aktif) -->
+              <div id="quiz-timer-options" class="quiz-timer-options" style="display: none;">
+                <label class="quiz-config-label" style="margin-top: 14px; margin-bottom: 10px;">Pilih Durasi Waktu:</label>
+                <div class="quiz-timer-presets" id="quiz-timer-presets">
+                  <button type="button" class="btn-timer-opt" data-minutes="1">1 Menit</button>
+                  <button type="button" class="btn-timer-opt active" data-minutes="3">3 Menit</button>
+                  <button type="button" class="btn-timer-opt" data-minutes="5">5 Menit</button>
+                  <button type="button" class="btn-timer-opt" data-minutes="10">10 Menit</button>
+                </div>
+                <div class="quiz-custom-input-row" style="margin-top: 12px;">
+                  <span class="quiz-custom-input-label">Atau ketik durasi menit sendiri:</span>
+                  <div class="quiz-custom-input-wrapper">
+                    <input type="number" id="quiz-timer-custom-minutes" class="quiz-custom-input" min="1" max="120" placeholder="Menit..." value="3">
+                    <span class="quiz-custom-unit">menit</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="quiz-start-actions">
+              <button id="btn-start-quiz" class="btn-start-quiz">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                <span>Mulai Kuis Sekarang</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2. ACTIVE QUIZ PANEL (Pengerjaan Soal Pilihan Ganda) -->
+        <div id="quiz-active-panel" class="quiz-panel quiz-active-panel" style="display: none;">
+          <div class="quiz-active-header">
+            <div class="quiz-progress-info">
+              <span id="quiz-progress-text">Pertanyaan 1 dari 5</span>
+              <div class="quiz-header-right-badges">
+                <div id="quiz-active-timer-box" class="quiz-active-timer-box" style="display: none;">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                  <span id="quiz-timer-countdown">03:00</span>
+                </div>
+                <span id="quiz-answered-badge" class="quiz-answered-badge">0 Terjawab</span>
+              </div>
+            </div>
+            <div class="quiz-progress-track">
+              <div id="quiz-progress-fill" class="quiz-progress-fill" style="width: 0%;"></div>
+            </div>
+          </div>
+
+          <!-- Questions List Container -->
+          <div id="quiz-questions-list" class="quiz-questions-list">
+            <!-- Rendered dynamically -->
+          </div>
+
+          <!-- Bottom Quiz Action -->
+          <div class="quiz-submit-bar">
+            <button id="btn-submit-quiz" class="btn-submit-quiz" disabled>
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              <span>Selesaikan Kuis & Lihat Pembahasan AI</span>
             </button>
           </div>
         </div>
-        <div class="input-hint">
-          <span>Tekan <strong>Enter</strong> untuk mengirim &bull; <strong>Shift + Enter</strong> untuk baris baru</span>
+
+        <!-- 3. RESULT & REVIEW PANEL (Skor, Pembahasan Logis AI, Try Again) -->
+        <div id="quiz-result-panel" class="quiz-panel quiz-result-panel" style="display: none;">
+          <!-- Score Summary Banner -->
+          <div class="quiz-score-banner" id="quiz-score-banner">
+            <div class="quiz-score-circle">
+              <span class="quiz-score-num" id="quiz-score-num">80</span>
+              <span class="quiz-score-denom">/ 100</span>
+            </div>
+            <div class="quiz-score-details">
+              <h3 id="quiz-score-headline">Kerja Bagus! 🎉</h3>
+              <p id="quiz-score-desc">Kamu menjawab 4 dari 5 pertanyaan dengan benar.</p>
+              <div class="quiz-score-stats">
+                <span class="stat-badge correct" id="quiz-stat-correct">✅ 4 Benar</span>
+                <span class="stat-badge wrong" id="quiz-stat-wrong">❌ 1 Salah</span>
+                <span class="stat-badge time" id="quiz-stat-time" style="display: none;">⏱️ 02:15</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Question-by-Question Review with AI Explanation -->
+          <div class="quiz-review-section">
+            <div class="quiz-review-heading">
+              <h4>Pembahasan Lengkap & Analisis AI:</h4>
+              <p>Pelajari jawaban yang benar dan alasan logis dari AI di bawah ini untuk memperdalam pemahamanmu.</p>
+            </div>
+            <div id="quiz-review-list" class="quiz-review-list">
+              <!-- Rendered dynamically -->
+            </div>
+          </div>
+
+          <!-- Action Buttons (Try Again & Back to Chat) -->
+          <div class="quiz-result-actions">
+            <button id="btn-try-again-quiz" class="btn-quiz-action btn-try-again">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+              <span>Ulangi Kuis (Try Again)</span>
+            </button>
+            <button id="btn-result-back-chat" class="btn-quiz-action btn-back-chat">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+              <span>Kembali ke Chat AI</span>
+            </button>
+          </div>
         </div>
-      </div>
+      </section>
     </main>
   </div>
 
@@ -261,7 +433,7 @@
       <div class="modal-header">
         <div class="modal-title">
           <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-          <span id="summary-modal-title">Rangkuman Hasil Belajar</span>
+          <span id="summary-modal-title">Review Materi yang Telah Dipelajari</span>
         </div>
         <button class="btn-ghost-icon close-modal-btn" data-target="modal-summary">
           <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
@@ -304,6 +476,87 @@
       </div>
       <div class="modal-footer">
         <button class="btn-secondary close-modal-btn" data-target="modal-view-module">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODAL 6: Pengaturan AI & Fleksibilitas Modul
+       ======================================================================== -->
+  <div class="modal-backdrop" id="modal-settings">
+    <div class="modal-window" style="max-width: 560px;">
+      <div class="modal-header">
+        <div class="modal-title">
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+          Pengaturan AI & Fleksibilitas Modul
+        </div>
+        <button class="btn-ghost-icon close-modal-btn" data-target="modal-settings">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <!-- 1. Flexibility Selection -->
+        <div class="form-group">
+          <label class="form-label">Keterikatan AI Terhadap Modul:</label>
+          <div class="setting-card-group">
+            <label class="setting-radio-card">
+              <input type="radio" name="ai-flexibility" value="high" id="flex-high" checked>
+              <div class="card-content">
+                <strong>✨ Sangat Luwes & Dinamis (Rekomendasi)</strong>
+                <p>AI tidak terikat modul. Modul berfungsi sebagai referensi kontekstual, dan AI bebas menjawab topik apapun dengan bahasa alami dan akurat.</p>
+              </div>
+            </label>
+            <label class="setting-radio-card">
+              <input type="radio" name="ai-flexibility" value="strict" id="flex-strict">
+              <div class="card-content">
+                <strong>🔒 Terikat Ketat Pada Modul</strong>
+                <p>AI membatasi diri pada lembar materi modul yang diunggah.</p>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- 2. AI Provider Selection -->
+        <div class="form-group" style="margin-top: 16px;">
+          <label class="form-label">Mesin Pemroses AI:</label>
+          <div class="setting-card-group">
+            <label class="setting-radio-card">
+              <input type="radio" name="ai-provider" value="offline" id="prov-offline" checked>
+              <div class="card-content">
+                <strong>⚡ Smart Dynamic Offline Engine (Bawaan)</strong>
+                <p>100% lokal di browser, super cepat, kaya wawasan umum, tanpa butuh internet/API key.</p>
+              </div>
+            </label>
+            <label class="setting-radio-card">
+              <input type="radio" name="ai-provider" value="gemini" id="prov-gemini">
+              <div class="card-content">
+                <strong>🌐 Google Gemini API (Online LLM Opsional)</strong>
+                <p>Gunakan API Key Google AI gratis untuk kecerdasan generatif LLM langsung di browser.</p>
+              </div>
+            </label>
+          </div>
+        </div>
+
+        <!-- 3. Gemini Configuration -->
+        <div id="gemini-config-box" style="display: none; padding: 14px; background: rgba(99, 102, 241, 0.08); border: 1px solid rgba(99, 102, 241, 0.25); border-radius: var(--radius-sm); margin-top: 12px;">
+          <div class="form-group" style="margin-bottom: 12px;">
+            <label class="form-label" for="gemini-api-key">Google Gemini API Key</label>
+            <input type="password" id="gemini-api-key" class="form-input" placeholder="Masukkan API Key Gemini...">
+            <div style="font-size: 0.75rem; color: var(--text-dim); margin-top: 4px;">Dapatkan API key gratis di <a href="https://aistudio.google.com/app/apikey" target="_blank" style="color: var(--accent-cyan); text-decoration: underline;">Google AI Studio</a>. Disimpan aman di browser Anda.</div>
+          </div>
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="gemini-model-select">Pilihan Model Gemini</label>
+            <select id="gemini-model-select" class="form-input">
+              <option value="gemini-1.5-flash">gemini-1.5-flash (Cepat, Ringan & Cerdas)</option>
+              <option value="gemini-2.0-flash">gemini-2.0-flash (Sangat Responsif & Canggih)</option>
+              <option value="gemini-1.5-pro">gemini-1.5-pro (Penalaran Kompleks)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-secondary close-modal-btn" data-target="modal-settings">Tutup</button>
+        <button id="btn-save-settings" class="btn-primary">Simpan Pengaturan</button>
       </div>
     </div>
   </div>

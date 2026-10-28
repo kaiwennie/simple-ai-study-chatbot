@@ -11,11 +11,12 @@ Aplikasi web (*Single Page Application*) asisten belajar offline berbasis **HTML
    - Tersedia tombol cepat template materi contoh (Kimia, Sejarah, Pemrograman, dll.).
    - Setiap kali modul baru diunggah, sistem otomatis membuat **sesi chat baru** yang didedikasikan khusus untuk modul tersebut.
 
-2. **AI Chatbot Belajar Cerdas & Diferensiasi Pertanyaan**:
-   - **Pertanyaan Materi Modul**: Menjawab dengan mengambil konsep, rumus, dan contoh dari modul aktif disertai kutipan sumber bagian materi.
-   - **Pertanyaan Umum / Di Luar Modul**: Membedakan pertanyaan umum (contoh: *"Siapa presiden Indonesia sekarang"*) dan memberi tanda jelas bahwa topik tersebut berada di luar cakupan materi modul aktif.
-   - **Sapaan & Percakapan Ramah**: Merespons sapaan (contoh: *"Halo"*, *"Selamat pagi"*) secara hangat dan mengarahkan kembali ke topik belajar.
-   - **Quick Suggestions**: Menampilkan chip rekomendasi pertanyaan yang dapat langsung diklik.
+2. **AI Chatbot Belajar Dinamis & Luwes (Tidak Terikat Kaku pada Modul)**:
+   - **Fleksibilitas Tinggi**: Modul berfungsi sebagai referensi kontekstual, tetapi AI tidak dibatasi oleh modul. AI bebas dan mampu menjawab pertanyaan apapun (sains, matematika, pemrograman, sejarah, bahasa, tips belajar, dll.) dengan akurat dan bahasa yang alami.
+   - **Sintesis Bahasa Mengalir & Dinamis**: Tidak sekadar menyalin poin modul secara kaku, melainkan menyusun penjelasan seperti tutor pribadi yang ramah, komunikatif, dan interaktif sesuai jenis pertanyaan (definisi, alasan, cara kerja, perbandingan, atau rumus).
+   - **Ensiklopedi Akademik Luas**: Dilengkapi basis pengetahuan offline komprehensif (Fisika, Biologi, Kimia, Matematika, Informatika, Sejarah, Produktivitas Belajar).
+   - **Pengaturan AI & Model (Mode AI)**: Tombol di header untuk mengatur keterikatan modul (Sangat Luwes vs Fokus Modul) serta opsi integrasi Google Gemini API gratis jika ingin kemampuan generative LLM langsung di browser.
+   - **Quick Suggestions**: Menampilkan rekomendasi pertanyaan interaktif yang dapat langsung diklik.
 
 3. **Manajemen Riwayat Chat (Sidebar Kiri)**:
    - Menampilkan daftar semua sesi modul sebelumnya dengan waktu dan kategori.

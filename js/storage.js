@@ -51,7 +51,7 @@ Nilai koefisien gesek kinetis selalu lebih kecil atau sama dengan koefisien gese
       {
         id: 'msg-init-1',
         sender: 'ai',
-        text: 'Halo! Saya Asisten Belajar offline Anda untuk modul **Fisika Dasar: Dinamika & Hukum Newton**. Silakan tanyakan konsep, rumus, atau contoh soal yang ingin Anda pelajari!',
+        text: 'Halo! Guru siap mendampingi kamu membedah modul **Fisika Dasar: Dinamika & Hukum Newton** dengan santai dan jelas. Mau kita bahas konsep dasar, rumus, atau contoh nyatanya dulu nih?',
         timestamp: Date.now() - 3600000 * 2,
         intent: 'greeting',
         suggestions: [
@@ -100,7 +100,7 @@ Jantung manusia memiliki 4 ruang utama:
       {
         id: 'msg-init-2',
         sender: 'ai',
-        text: 'Halo! Saya siap membantu belajar modul **Biologi: Sistem Peredaran Darah Manusia**. Silakan tanyakan bagian jantung, komponen darah, atau alur peredaran darah!',
+        text: 'Halo! Yuk kita pelajari materi **Biologi: Sistem Peredaran Darah Manusia** dengan santai dan seru. Ada bagian jantung, fungsi darah, atau alur sirkulasi yang ingin kamu tanyakan duluan?',
         timestamp: Date.now() - 86400000,
         intent: 'greeting',
         suggestions: [
@@ -157,25 +157,30 @@ class StorageManager {
 
   static createSession(title, moduleContent, category = 'Umum') {
     const sessions = this.getSessions();
+    const cleanContent = typeof StudyEngine !== 'undefined' && StudyEngine.cleanModuleContent
+      ? StudyEngine.cleanModuleContent(moduleContent)
+      : moduleContent.trim();
+
     const newSession = {
       id: 'session-' + Date.now() + '-' + Math.random().toString(36).substr(2, 6),
       title: title.trim() || 'Modul Baru',
       category: category.trim() || 'Materi',
       createdAt: Date.now(),
       updatedAt: Date.now(),
-      moduleContent: moduleContent.trim(),
+      moduleContent: cleanContent,
       messages: []
     };
 
     // Extract potential quick questions from module headings
-    const previewSuggestions = StudyEngine.generateQuickSuggestions(moduleContent);
+    const previewSuggestions = StudyEngine.generateQuickSuggestions(cleanContent);
 
     newSession.messages.push({
       id: 'msg-' + Date.now(),
       sender: 'ai',
-      text: `Modul **${newSession.title}** berhasil dimuat! 🎉\n\nSaya telah menganalisis materi Anda. Anda dapat langsung menanyakan topik apapun terkait materi ini, atau klik salah satu rekomendasi pertanyaan di bawah:`,
+      text: `Modul **${newSession.title}** berhasil dimuat! 🎉\n\nMateri sudah siap sebagai referensi belajar kita. Kamu bisa menanyakan topik apapun terkait modul ini, konsep lanjutan, maupun pertanyaan lain secara bebas dan dinamis!`,
       timestamp: Date.now(),
       intent: 'module_loaded',
+      badgeText: 'Modul Siap',
       suggestions: previewSuggestions
     });
 
@@ -244,6 +249,31 @@ class StorageManager {
       }
     } catch (e) {
       console.error('Failed to set user name', e);
+    }
+  }
+
+  static getSettings() {
+    try {
+      const data = localStorage.getItem(STORAGE_KEY_SETTINGS);
+      if (data) {
+        return JSON.parse(data);
+      }
+    } catch (e) {
+      console.error('Failed to parse settings', e);
+    }
+    return {
+      flexibility: 'high',
+      aiProvider: 'offline',
+      geminiApiKey: '',
+      geminiModel: 'gemini-1.5-flash'
+    };
+  }
+
+  static saveSettings(settings) {
+    try {
+      localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(settings));
+    } catch (e) {
+      console.error('Failed to save settings', e);
     }
   }
 

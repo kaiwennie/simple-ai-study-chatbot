@@ -125,41 +125,86 @@ const modalRename = document.getElementById('modal-rename');
 const modalDelete = document.getElementById('modal-delete');
 const modalSummary = document.getElementById('modal-summary');
 const modalViewModule = document.getElementById('modal-view-module');
+const modalSettings = document.getElementById('modal-settings');
+const btnOpenSettings = document.getElementById('btn-open-settings');
 
-// Simple Markdown Parser for beautiful text formatting
+// Markdown Parser for clean, straight-to-the-point text formatting
 function renderMarkdown(text) {
   if (!text) return '';
-  let html = text
+
+  // Hapus teks referensi modul di bawah jawaban secara menyeluruh
+  let clean = text
+    .replace(/\n*\s*\*\(\s*📍\s*Referensi Modul:[^\)]*\)\*/gi, '')
+    .replace(/\n*\s*\(📍\s*Referensi Modul:[^\)]*\)/gi, '')
+    .replace(/\n*\s*\*\([^\)]*Referensi Modul:[^\)]*\)\*/gi, '')
+    .replace(/\n*\s*\*(?:📍|📌)?\s*Referensi\s*:?[^\n]*\*/gi, '')
+    .trim();
+
+  // Escape HTML dasar untuk keamanan
+  let html = clean
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
+
+  // Kembalikan entity bullet atau render aman untuk tag metadata legacy
+  html = html.replace(/&amp;bull;/g, '•');
+  html = html.replace(/&lt;small(?:\s+style="[^"]*")?&gt;(.*?)&lt;\/small&gt;/gi, '<small style="color: var(--text-dim); display: block; margin-top: 6px; font-size: 0.8rem;">$1</small>');
 
   // Code blocks ```code```
   html = html.replace(/```([a-z]*)\n([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
   // Inline code `code`
   html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
-  // Headers ###
-  html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
-  html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
-  html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
+
+  // Format teks langsung tanpa judul blok terpisah (h1, h2, h3 dijadikan teks penekanan langsung)
+  html = html.replace(/^### (.*$)/gim, '<p><strong>$1</strong></p>');
+  html = html.replace(/^## (.*$)/gim, '<p><strong>$1</strong></p>');
+  html = html.replace(/^# (.*$)/gim, '<p><strong>$1</strong></p>');
+
   // Blockquotes >
   html = html.replace(/^\> (.*$)/gim, '<blockquote>$1</blockquote>');
+
   // Bold & Italic
   html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
   html = html.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+
   // Horizontal Rule ---
   html = html.replace(/^\-\-\-$/gim, '<hr>');
-  // Unordered list items - item or * item
-  html = html.replace(/^\s*[\-\*]\s+(.*$)/gim, '<li>$1</li>');
-  html = html.replace(/(<li>.*<\/li>)/gims, '<ul>$1</ul>');
-  // Ordered lists
-  html = html.replace(/^\s*\d+\.\s+(.*$)/gim, '<li>$1</li>');
-  // Line breaks to paragraphs
-  const paragraphs = html.split(/\n\n+/);
+
+  // List processing per-line yang AMAN dan TIDAK MEMOTONG TEKS (bebas bug greedy regex)
+  const lines = html.split('\n');
+  const processed = [];
+  let inUl = false;
+  let inOl = false;
+
+  for (let i = 0; i < lines.length; i++) {
+    const rawLine = lines[i];
+    const ulMatch = rawLine.match(/^\s*[\-\*]\s+(.*)$/);
+    const olMatch = rawLine.match(/^\s*(\d+)[\.\)]\s+(.*)$/);
+
+    if (ulMatch) {
+      if (inOl) { processed.push('</ol>'); inOl = false; }
+      if (!inUl) { processed.push('<ul>'); inUl = true; }
+      processed.push(`<li>${ulMatch[1]}</li>`);
+    } else if (olMatch) {
+      if (inUl) { processed.push('</ul>'); inUl = false; }
+      if (!inOl) { processed.push('<ol>'); inOl = true; }
+      processed.push(`<li>${olMatch[2]}</li>`);
+    } else {
+      if (inUl) { processed.push('</ul>'); inUl = false; }
+      if (inOl) { processed.push('</ol>'); inOl = false; }
+      processed.push(rawLine);
+    }
+  }
+  if (inUl) processed.push('</ul>');
+  if (inOl) processed.push('</ol>');
+
+  // Line breaks to clean paragraphs
+  const joined = processed.join('\n');
+  const paragraphs = joined.split(/\n\n+/);
   html = paragraphs.map(p => {
     p = p.trim();
     if (!p) return '';
-    if (p.startsWith('<h') || p.startsWith('<ul>') || p.startsWith('<pre>') || p.startsWith('<blockquote>') || p.startsWith('<hr>')) {
+    if (p.startsWith('<ul>') || p.startsWith('<ol>') || p.startsWith('<pre>') || p.startsWith('<blockquote>') || p.startsWith('<hr>') || p.startsWith('<p>')) {
       return p;
     }
     return `<p>${p.replace(/\n/g, '<br>')}</p>`;
@@ -299,6 +344,7 @@ function switchSession(sessionId) {
   StorageManager.setActiveSessionId(sessionId);
   activeSession = StorageManager.getSessionById(sessionId);
   renderHistory(searchInputEl.value);
+  showChatView();
   renderActiveChat();
 }
 
@@ -341,13 +387,24 @@ function appendMessageElement(msg, animated = true) {
   // Choose intent badge
   let badgeHtml = '';
   if (msg.sender === 'ai') {
-    if (msg.intent === 'general_knowledge' || msg.intent === 'unrelated') {
-      badgeHtml = `<span class="intent-badge out-of-scope">Pertanyaan Umum / Luar Modul</span>`;
-    } else if (msg.intent === 'greeting') {
-      badgeHtml = `<span class="intent-badge greeting">Sapaan</span>`;
-    } else {
-      badgeHtml = `<span class="intent-badge module">${activeSession ? activeSession.category : 'Modul'}</span>`;
+    const badgeText = msg.badgeText || (msg.type === 'module' ? (activeSession ? activeSession.category : 'Modul') : 'Asisten AI');
+    let badgeClass = 'dynamic';
+    if (msg.type === 'knowledge' || msg.intent === 'broad_knowledge') {
+      badgeClass = 'knowledge';
+    } else if (msg.type === 'gemini' || msg.intent === 'gemini_response') {
+      badgeClass = 'gemini';
+    } else if (msg.type === 'calculation' || msg.intent === 'math_calc') {
+      badgeClass = 'calculation';
+    } else if (msg.type === 'quiz' || msg.intent === 'quiz') {
+      badgeClass = 'quiz';
+    } else if (msg.type === 'summary' || msg.intent === 'summary') {
+      badgeClass = 'summary';
+    } else if (msg.type === 'greeting' || msg.intent === 'greeting') {
+      badgeClass = 'greeting';
+    } else if (msg.type === 'module' || msg.intent === 'module_qa') {
+      badgeClass = 'module';
     }
+    badgeHtml = `<span class="intent-badge ${badgeClass}">${badgeText}</span>`;
   }
 
   const avatar = msg.sender === 'ai' 
@@ -358,21 +415,6 @@ function appendMessageElement(msg, animated = true) {
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
        </div>`;
 
-  // Render suggestions chips if provided
-  let suggestionsHtml = '';
-  if (msg.suggestions && msg.suggestions.length > 0) {
-    suggestionsHtml = `
-      <div class="quick-suggestions">
-        ${msg.suggestions.map(s => `
-          <button class="suggestion-chip" data-query="${s.replace(/"/g, '&quot;')}">
-            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
-            ${s}
-          </button>
-        `).join('')}
-      </div>
-    `;
-  }
-
   const currentUserName = StorageManager.getUserName();
   const userDisplayName = currentUserName ? `Anda (${currentUserName})` : 'Anda';
 
@@ -380,24 +422,15 @@ function appendMessageElement(msg, animated = true) {
     ${avatar}
     <div class="message-content-box">
       <div class="message-meta">
-        <strong>${msg.sender === 'ai' ? 'EduBot AI' : userDisplayName}</strong>
+        <strong>${msg.sender === 'ai' ? 'EduBot (Guru Belajar)' : userDisplayName}</strong>
         <span>${formatTimestamp(msg.timestamp)}</span>
         ${badgeHtml}
       </div>
       <div class="message-bubble ${msg.sender}">
         ${renderMarkdown(msg.text)}
       </div>
-      ${suggestionsHtml}
     </div>
   `;
-
-  // Attach event listeners to suggestion chips inside this message
-  wrapper.querySelectorAll('.suggestion-chip').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const query = btn.dataset.query;
-      handleSendMessage(query);
-    });
-  });
 
   messagesContainerEl.appendChild(wrapper);
 }
@@ -414,10 +447,10 @@ function updateUserBadge(name) {
     if (name) {
       badge.textContent = `👤 ${name}`;
       badge.style.display = 'inline-flex';
-      chatInputEl.placeholder = `Tanyakan materi ini, ${name}... (Tekan Enter untuk kirim)`;
+      chatInputEl.placeholder = `Mau belajar apa hari ini, ${name}? Ketik pertanyaan atau sapamu... (Enter)`;
     } else {
       badge.style.display = 'none';
-      chatInputEl.placeholder = `Tanyakan konsep, rumus, atau bagian dari modul ini... (Tekan Enter untuk kirim)`;
+      chatInputEl.placeholder = `Tanyakan materi pelajaran, rumus, atau sapa gurumu di sini... (Enter untuk kirim)`;
     }
   }
 }
@@ -425,13 +458,32 @@ function updateUserBadge(name) {
 // Send Message Handler
 function handleSendMessage(overrideText = null) {
   const text = overrideText !== null ? overrideText : chatInputEl.value.trim();
-  if (!text || !activeSession) return;
+  if (!text) return;
+
+  // Ensure activeSession exists
+  if (!activeSession) {
+    const sessions = StorageManager.getSessions();
+    if (sessions && sessions.length > 0) {
+      activeSession = sessions[0];
+      StorageManager.setActiveSessionId(activeSession.id);
+    } else {
+      activeSession = StorageManager.createSession('Sesi Belajar Umum', 'Catatan Belajar & Tanya Jawab Bebas', 'Umum');
+    }
+    renderHistory();
+    renderActiveChat();
+  }
 
   // Check if user is introducing their name
-  const detectedName = StudyEngine.detectNameIntro(text);
-  if (detectedName) {
-    StorageManager.setUserName(detectedName);
-    updateUserBadge(detectedName);
+  try {
+    if (typeof StudyEngine.detectNameIntro === 'function') {
+      const detectedName = StudyEngine.detectNameIntro(text);
+      if (detectedName) {
+        StorageManager.setUserName(detectedName);
+        updateUserBadge(detectedName);
+      }
+    }
+  } catch (e) {
+    console.warn('Name detection check:', e);
   }
 
   // Add User Message
@@ -456,41 +508,111 @@ function handleSendMessage(overrideText = null) {
   typingIndicatorEl.style.display = 'flex';
   scrollToBottom();
 
-  // Generate AI Response with simulated natural thinking time
-  setTimeout(() => {
-    typingIndicatorEl.style.display = 'none';
+  const settings = StorageManager.getSettings();
+  const currentUserName = StorageManager.getUserName();
 
-    const currentUserName = StorageManager.getUserName();
-    const aiResult = StudyEngine.generateResponse(
+  if (settings.aiProvider === 'gemini' && settings.geminiApiKey) {
+    // Online Gemini API request
+    StudyEngine.generateGeminiResponse(
+      settings.geminiApiKey,
+      settings.geminiModel,
       text,
       activeSession.moduleContent,
       activeSession.title,
       activeSession.messages,
       currentUserName
-    );
+    ).then(aiResult => {
+      typingIndicatorEl.style.display = 'none';
 
-    if (aiResult.detectedName) {
-      StorageManager.setUserName(aiResult.detectedName);
-      updateUserBadge(aiResult.detectedName);
-    }
+      const aiMsg = {
+        id: 'msg-' + Date.now(),
+        sender: 'ai',
+        text: aiResult.text,
+        timestamp: Date.now(),
+        intent: aiResult.intent,
+        type: aiResult.type,
+        badgeText: aiResult.badgeText,
+        suggestions: aiResult.suggestions || []
+      };
 
-    const aiMsg = {
-      id: 'msg-' + Date.now(),
-      sender: 'ai',
-      text: aiResult.text,
-      timestamp: Date.now(),
-      intent: aiResult.intent,
-      suggestions: aiResult.suggestions || []
-    };
+      StorageManager.addMessage(activeSession.id, aiMsg);
+      appendMessageElement(aiMsg, true);
+      scrollToBottom();
+      renderHistory(searchInputEl.value);
+      activeChatUpdatedEl.textContent = `Diperbarui ${formatTimestamp(Date.now())}`;
+    }).catch(err => {
+      console.warn('Gemini API call failed, falling back to local engine:', err);
+      showToast(`Koneksi Gemini gagal (${err.message}). Menggunakan Smart Engine lokal.`, 'warning');
+      
+      // Fallback to local dynamic engine
+      setTimeout(() => {
+        typingIndicatorEl.style.display = 'none';
+        const fallbackResult = StudyEngine.generateResponse(
+          text,
+          activeSession.moduleContent,
+          activeSession.title,
+          activeSession.messages,
+          currentUserName,
+          settings
+        );
 
-    StorageManager.addMessage(activeSession.id, aiMsg);
-    appendMessageElement(aiMsg, true);
-    scrollToBottom();
+        const aiMsg = {
+          id: 'msg-' + Date.now(),
+          sender: 'ai',
+          text: fallbackResult.text,
+          timestamp: Date.now(),
+          intent: fallbackResult.intent,
+          type: fallbackResult.type,
+          badgeText: fallbackResult.badgeText,
+          suggestions: fallbackResult.suggestions || []
+        };
 
-    // Refresh history metadata in sidebar
-    renderHistory(searchInputEl.value);
-    activeChatUpdatedEl.textContent = `Diperbarui ${formatTimestamp(Date.now())}`;
-  }, 450);
+        StorageManager.addMessage(activeSession.id, aiMsg);
+        appendMessageElement(aiMsg, true);
+        scrollToBottom();
+        renderHistory(searchInputEl.value);
+        activeChatUpdatedEl.textContent = `Diperbarui ${formatTimestamp(Date.now())}`;
+      }, 300);
+    });
+  } else {
+    // Generate AI Response with smart dynamic local engine
+    setTimeout(() => {
+      typingIndicatorEl.style.display = 'none';
+
+      const aiResult = StudyEngine.generateResponse(
+        text,
+        activeSession.moduleContent,
+        activeSession.title,
+        activeSession.messages,
+        currentUserName,
+        settings
+      );
+
+      if (aiResult.detectedName) {
+        StorageManager.setUserName(aiResult.detectedName);
+        updateUserBadge(aiResult.detectedName);
+      }
+
+      const aiMsg = {
+        id: 'msg-' + Date.now(),
+        sender: 'ai',
+        text: aiResult.text,
+        timestamp: Date.now(),
+        intent: aiResult.intent,
+        type: aiResult.type,
+        badgeText: aiResult.badgeText,
+        suggestions: aiResult.suggestions || []
+      };
+
+      StorageManager.addMessage(activeSession.id, aiMsg);
+      appendMessageElement(aiMsg, true);
+      scrollToBottom();
+
+      // Refresh history metadata in sidebar
+      renderHistory(searchInputEl.value);
+      activeChatUpdatedEl.textContent = `Diperbarui ${formatTimestamp(Date.now())}`;
+    }, 380);
+  }
 }
 
 // ============================================================================
@@ -645,40 +767,127 @@ const summaryModalTitleEl = document.getElementById('summary-modal-title');
 const btnCopySummary = document.getElementById('btn-copy-summary');
 const btnDownloadSummary = document.getElementById('btn-download-summary');
 
-btnSummarizeChat.addEventListener('click', () => {
+btnSummarizeChat.addEventListener('click', async () => {
   if (!activeSession) return;
 
-  const summary = StudyEngine.generateSummary(
-    activeSession.moduleContent,
-    activeSession.title,
-    activeSession.messages
-  );
+  const currentUserName = StorageManager.getUserName();
+  const settings = StorageManager.getSettings();
+
+  summaryModalTitleEl.textContent = `Review Materi: ${activeSession.title}`;
+  summaryContentEl.innerHTML = `
+    <div style="text-align: center; padding: 36px 20px; color: var(--text-dim);">
+      <div class="typing-indicator" style="display: inline-flex; justify-content: center; margin-bottom: 14px;">
+        <div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>
+      </div>
+      <p style="color: #fff; font-weight: 600; font-size: 1rem; margin-bottom: 6px;">Guru AI sedang menganalisis sesi obrolan...</p>
+      <p style="font-size: 0.84rem;">Menyusun review intisari konsep dan pemahaman yang telah dibahas bersama.</p>
+    </div>
+  `;
+  openModal(modalSummary);
+
+  let summary = null;
+  if (settings.aiProvider === 'gemini' && settings.geminiApiKey) {
+    try {
+      summary = await StudyEngine.generateGeminiSummary(
+        settings.geminiApiKey,
+        settings.geminiModel,
+        activeSession.moduleContent,
+        activeSession.title,
+        activeSession.messages,
+        currentUserName
+      );
+    } catch (e) {
+      console.warn('Gemini summary error, fallback to local engine:', e);
+      showToast('Koneksi Gemini lambat/gagal. Menggunakan Smart Engine lokal.', 'warning');
+    }
+  }
+
+  if (!summary) {
+    // Smart Offline Material Review Engine
+    summary = StudyEngine.generateSummary(
+      activeSession.moduleContent,
+      activeSession.title,
+      activeSession.messages,
+      currentUserName
+    );
+  }
 
   currentSummaryData = summary;
-  summaryModalTitleEl.textContent = `Rangkuman: ${activeSession.title}`;
-  summaryContentEl.innerHTML = renderMarkdown(summary.markdown);
-  openModal(modalSummary);
+
+  if (summary.isEmpty) {
+    btnCopySummary.disabled = true;
+    btnDownloadSummary.disabled = true;
+    btnCopySummary.style.opacity = '0.4';
+    btnDownloadSummary.style.opacity = '0.4';
+    btnCopySummary.style.cursor = 'not-allowed';
+    btnDownloadSummary.style.cursor = 'not-allowed';
+
+    summaryContentEl.innerHTML = `
+      <div class="summary-empty-state" style="text-align: center; padding: 32px 18px;">
+        <div style="width: 58px; height: 58px; border-radius: 50%; background: rgba(99, 102, 241, 0.12); border: 1px solid rgba(99, 102, 241, 0.25); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px; color: var(--primary-light);">
+          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        </div>
+        <h3 style="font-size: 1.1rem; font-weight: 600; color: #fff; margin-bottom: 8px;">Belum Ada Materi yang Dibahas</h3>
+        <p style="color: var(--text-dim); font-size: 0.88rem; line-height: 1.6; max-width: 440px; margin: 0 auto 20px auto;">
+          Review materi dirangkum otomatis dari hasil obrolan dan konsep pelajaran yang telah kamu diskusikan bersama Guru EduBot. Karena kamu belum mulai membahas materi modul <strong>"${activeSession.title.replace(/</g, '&lt;')}"</strong> di ruang chat, review ini masih kosong.
+        </p>
+        <button id="btn-start-study-prompt" class="btn-primary" style="padding: 9px 18px; font-size: 0.88rem; display: inline-flex; align-items: center; gap: 8px; margin: 0 auto;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          Mulai Diskusi Materi Sekarang
+        </button>
+      </div>
+    `;
+
+    const startBtn = document.getElementById('btn-start-study-prompt');
+    if (startBtn) {
+      startBtn.addEventListener('click', () => {
+        closeModal(modalSummary);
+        chatInputEl.focus();
+        if (!chatInputEl.value) {
+          const suggestions = StudyEngine.generateQuickSuggestions(activeSession.moduleContent);
+          if (suggestions && suggestions.length > 0) {
+            chatInputEl.value = suggestions[0];
+            btnSendEl.disabled = false;
+          }
+        }
+      });
+    }
+  } else {
+    btnCopySummary.disabled = false;
+    btnDownloadSummary.disabled = false;
+    btnCopySummary.style.opacity = '1';
+    btnDownloadSummary.style.opacity = '1';
+    btnCopySummary.style.cursor = 'pointer';
+    btnDownloadSummary.style.cursor = 'pointer';
+    summaryContentEl.innerHTML = renderMarkdown(summary.markdown);
+  }
 });
 
 btnCopySummary.addEventListener('click', () => {
-  if (!currentSummaryData) return;
+  if (!currentSummaryData || currentSummaryData.isEmpty) {
+    showToast('Belum ada materi yang dibahas untuk disalin!', 'warning');
+    return;
+  }
   navigator.clipboard.writeText(currentSummaryData.markdown).then(() => {
-    showToast('Rangkuman berhasil disalin ke clipboard!', 'success');
+    showToast('Review materi berhasil disalin ke clipboard!', 'success');
   }).catch(() => {
-    showToast('Gagal menyalin rangkuman', 'error');
+    showToast('Gagal menyalin review materi', 'error');
   });
 });
 
 btnDownloadSummary.addEventListener('click', () => {
-  if (!currentSummaryData || !activeSession) return;
+  if (!currentSummaryData || currentSummaryData.isEmpty || !activeSession) {
+    showToast('Belum ada materi yang dibahas untuk diunduh!', 'warning');
+    return;
+  }
   const blob = new Blob([currentSummaryData.markdown], { type: 'text/markdown;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `Rangkuman_${activeSession.title.replace(/[^a-zA-Z0-9]/g, '_')}.md`;
+  a.download = `Review_Materi_${activeSession.title.replace(/[^a-zA-Z0-9]/g, '_')}.md`;
   a.click();
   URL.revokeObjectURL(url);
-  showToast('File rangkuman (.md) berhasil diunduh!', 'success');
+  showToast('File review materi (.md) berhasil diunduh!', 'success');
 });
 
 // 5. View Module Modal
@@ -691,6 +900,78 @@ btnViewModule.addEventListener('click', () => {
   viewModuleTitleEl.textContent = `Teks Modul: ${activeSession.title}`;
   viewModuleContentEl.textContent = activeSession.moduleContent;
   openModal(modalViewModule);
+});
+
+// 6. Settings Modal Handler
+function initSettingsModal() {
+  const settings = StorageManager.getSettings();
+
+  // Flexibility radio
+  if (settings.flexibility === 'strict') {
+    document.getElementById('flex-strict').checked = true;
+  } else {
+    document.getElementById('flex-high').checked = true;
+  }
+
+  // Provider radio
+  if (settings.aiProvider === 'gemini') {
+    document.getElementById('prov-gemini').checked = true;
+    document.getElementById('gemini-config-box').style.display = 'block';
+  } else {
+    document.getElementById('prov-offline').checked = true;
+    document.getElementById('gemini-config-box').style.display = 'none';
+  }
+
+  // Inputs
+  document.getElementById('gemini-api-key').value = settings.geminiApiKey || '';
+  if (settings.geminiModel) {
+    document.getElementById('gemini-model-select').value = settings.geminiModel;
+  }
+
+  openModal(modalSettings);
+}
+
+// Toggle Gemini Box on provider radio change
+document.querySelectorAll('input[name="ai-provider"]').forEach(radio => {
+  radio.addEventListener('change', (e) => {
+    const box = document.getElementById('gemini-config-box');
+    if (e.target.value === 'gemini') {
+      box.style.display = 'block';
+      document.getElementById('gemini-api-key').focus();
+    } else {
+      box.style.display = 'none';
+    }
+  });
+});
+
+if (btnOpenSettings) {
+  btnOpenSettings.addEventListener('click', () => {
+    initSettingsModal();
+  });
+}
+
+document.getElementById('btn-save-settings').addEventListener('click', () => {
+  const flexibility = document.querySelector('input[name="ai-flexibility"]:checked').value;
+  const aiProvider = document.querySelector('input[name="ai-provider"]:checked').value;
+  const geminiApiKey = document.getElementById('gemini-api-key').value.trim();
+  const geminiModel = document.getElementById('gemini-model-select').value;
+
+  if (aiProvider === 'gemini' && !geminiApiKey) {
+    showToast('Silakan masukkan Google Gemini API Key Anda!', 'warning');
+    document.getElementById('gemini-api-key').focus();
+    return;
+  }
+
+  StorageManager.saveSettings({
+    flexibility,
+    aiProvider,
+    geminiApiKey,
+    geminiModel
+  });
+
+  closeModal(modalSettings);
+  const providerLabel = aiProvider === 'gemini' ? `Google Gemini (${geminiModel})` : 'Smart Dynamic Offline Engine';
+  showToast(`Pengaturan berhasil disimpan! Mode: ${providerLabel}`, 'success');
 });
 
 // Close Modal buttons
@@ -712,6 +993,7 @@ document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
   });
 });
 
+// Reset data button
 // Reset data button
 document.getElementById('btn-reset-data').addEventListener('click', () => {
   if (confirm('Kembalikan modul ke contoh bawaan (Fisika & Biologi)?')) {
@@ -750,6 +1032,458 @@ chatInputEl.addEventListener('keydown', (e) => {
 btnSendEl.addEventListener('click', () => {
   handleSendMessage();
 });
+
+// =========================================================================
+// INTERACTIVE QUIZ FEATURE CONTROLLER
+// =========================================================================
+let currentQuizQuestions = [];
+let currentQuizAnswers = {}; // map: { [questionId]: optionIndex }
+let selectedQuizCount = 5;
+let isQuizTimerEnabled = false;
+let selectedTimerMinutes = 3;
+let quizTimerInterval = null;
+let quizRemainingSeconds = 0;
+let quizTotalDurationSeconds = 0;
+
+const chatFlowViewEl = document.getElementById('chat-flow-view');
+const quizPageViewEl = document.getElementById('quiz-page-view');
+const btnOpenQuizView = document.getElementById('btn-open-quiz-view');
+const btnQuizBackChat = document.getElementById('btn-quiz-back-chat');
+const btnResultBackChat = document.getElementById('btn-result-back-chat');
+const btnStartQuiz = document.getElementById('btn-start-quiz');
+const btnSubmitQuiz = document.getElementById('btn-submit-quiz');
+const btnTryAgainQuiz = document.getElementById('btn-try-again-quiz');
+
+const quizSetupPanel = document.getElementById('quiz-setup-panel');
+const quizActivePanel = document.getElementById('quiz-active-panel');
+const quizResultPanel = document.getElementById('quiz-result-panel');
+
+const quizBadgeModule = document.getElementById('quiz-badge-module');
+const quizHeaderTitle = document.getElementById('quiz-header-title');
+const quizQuestionsList = document.getElementById('quiz-questions-list');
+const quizProgressText = document.getElementById('quiz-progress-text');
+const quizAnsweredBadge = document.getElementById('quiz-answered-badge');
+const quizProgressFill = document.getElementById('quiz-progress-fill');
+
+// Timer & Custom Count DOM Elements
+const quizCustomCountInput = document.getElementById('quiz-custom-count');
+const quizTimerToggle = document.getElementById('quiz-timer-toggle');
+const quizTimerOptions = document.getElementById('quiz-timer-options');
+const quizTimerCustomInput = document.getElementById('quiz-timer-custom-minutes');
+const quizActiveTimerBox = document.getElementById('quiz-active-timer-box');
+const quizTimerCountdown = document.getElementById('quiz-timer-countdown');
+const quizStatTime = document.getElementById('quiz-stat-time');
+
+function formatSecondsToMMSS(seconds) {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
+function stopQuizTimer() {
+  if (quizTimerInterval) {
+    clearInterval(quizTimerInterval);
+    quizTimerInterval = null;
+  }
+  if (quizActiveTimerBox) {
+    quizActiveTimerBox.classList.remove('urgent');
+  }
+}
+
+function showChatView() {
+  stopQuizTimer();
+  if (quizPageViewEl) quizPageViewEl.style.display = 'none';
+  if (chatFlowViewEl) chatFlowViewEl.style.display = 'flex';
+}
+
+function showQuizView() {
+  stopQuizTimer();
+  if (!activeSession) {
+    showToast('Silakan pilih atau unggah modul terlebih dahulu untuk memulai kuis!', 'warning');
+    return;
+  }
+
+  if (chatFlowViewEl) chatFlowViewEl.style.display = 'none';
+  if (quizPageViewEl) quizPageViewEl.style.display = 'flex';
+
+  quizBadgeModule.textContent = activeSession.category || 'Modul Belajar';
+  quizHeaderTitle.textContent = `Kuis: ${activeSession.title}`;
+
+  // Reset to setup panel
+  quizSetupPanel.style.display = 'block';
+  quizActivePanel.style.display = 'none';
+  quizResultPanel.style.display = 'none';
+}
+
+function handleStartQuiz() {
+  stopQuizTimer();
+  if (!activeSession) {
+    showToast('Sesi modul belajar belum dipilih.', 'warning');
+    return;
+  }
+
+  // Ambil jumlah soal dari input kustom jika ada nilai valid
+  if (quizCustomCountInput) {
+    const customVal = parseInt(quizCustomCountInput.value, 10);
+    if (!isNaN(customVal) && customVal >= 1) {
+      selectedQuizCount = Math.min(Math.max(customVal, 1), 50);
+    }
+  }
+
+  currentQuizAnswers = {};
+  currentQuizQuestions = StudyEngine.generateMultipleChoiceQuiz(
+    activeSession.moduleContent,
+    activeSession.title,
+    selectedQuizCount
+  );
+
+  if (!currentQuizQuestions || currentQuizQuestions.length === 0) {
+    showToast('Belum ada materi cukup pada modul ini untuk disusun kuis.', 'warning');
+    return;
+  }
+
+  quizSetupPanel.style.display = 'none';
+  quizActivePanel.style.display = 'block';
+  quizResultPanel.style.display = 'none';
+
+  renderQuizQuestions();
+  updateQuizProgress();
+
+  // Inisialisasi Timer jika opsi timer diaktifkan
+  if (isQuizTimerEnabled) {
+    if (quizTimerCustomInput) {
+      const customMin = parseInt(quizTimerCustomInput.value, 10);
+      if (!isNaN(customMin) && customMin >= 1) {
+        selectedTimerMinutes = Math.min(Math.max(customMin, 1), 120);
+      }
+    }
+
+    quizRemainingSeconds = selectedTimerMinutes * 60;
+    quizTotalDurationSeconds = quizRemainingSeconds;
+
+    if (quizActiveTimerBox) quizActiveTimerBox.style.display = 'inline-flex';
+    if (quizTimerCountdown) quizTimerCountdown.textContent = formatSecondsToMMSS(quizRemainingSeconds);
+
+    quizTimerInterval = setInterval(() => {
+      quizRemainingSeconds--;
+
+      if (quizTimerCountdown) {
+        quizTimerCountdown.textContent = formatSecondsToMMSS(Math.max(quizRemainingSeconds, 0));
+      }
+
+      // Beri animasi visual peringatan jika waktu tersisa <= 30 detik
+      if (quizRemainingSeconds <= 30 && quizActiveTimerBox) {
+        quizActiveTimerBox.classList.add('urgent');
+      }
+
+      // Waktu habis: otomatis submit kuis!
+      if (quizRemainingSeconds <= 0) {
+        stopQuizTimer();
+        showToast('⏱️ Waktu pengerjaan kuis telah habis! Jawaban Anda otomatis dikumpulkan.', 'info');
+        handleSubmitQuiz();
+      }
+    }, 1000);
+  } else {
+    if (quizActiveTimerBox) quizActiveTimerBox.style.display = 'none';
+  }
+
+  quizPageViewEl.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function renderQuizQuestions() {
+  quizQuestionsList.innerHTML = '';
+
+  currentQuizQuestions.forEach((q, idx) => {
+    const card = document.createElement('div');
+    card.className = 'quiz-question-card';
+    card.id = `quiz-card-${q.id}`;
+
+    let optionsHtml = '';
+    q.options.forEach((optText, optIdx) => {
+      const isSelected = currentQuizAnswers[q.id] === optIdx;
+      optionsHtml += `
+        <button type="button" class="quiz-option-btn ${isSelected ? 'selected' : ''}" data-qid="${q.id}" data-oidx="${optIdx}">
+          <span class="option-check-circle"></span>
+          <span class="option-text">${optText}</span>
+        </button>
+      `;
+    });
+
+    card.innerHTML = `
+      <div class="quiz-q-header">
+        <span class="quiz-q-badge">Soal ${idx + 1} dari ${currentQuizQuestions.length}</span>
+        <span class="quiz-q-topic">${q.topic || 'Materi Modul'}</span>
+      </div>
+      <h3 class="quiz-q-title">${q.question}</h3>
+      <div class="quiz-options-group">
+        ${optionsHtml}
+      </div>
+    `;
+
+    quizQuestionsList.appendChild(card);
+  });
+
+  // Attach click listener for option selection
+  const optionBtns = quizQuestionsList.querySelectorAll('.quiz-option-btn');
+  optionBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const qid = btn.getAttribute('data-qid');
+      const oidx = parseInt(btn.getAttribute('data-oidx'), 10);
+      selectQuizOption(qid, oidx);
+    });
+  });
+}
+
+function selectQuizOption(qid, oidx) {
+  currentQuizAnswers[qid] = oidx;
+
+  const card = document.getElementById(`quiz-card-${qid}`);
+  if (card) {
+    const btns = card.querySelectorAll('.quiz-option-btn');
+    btns.forEach(b => {
+      const bIdx = parseInt(b.getAttribute('data-oidx'), 10);
+      if (bIdx === oidx) {
+        b.classList.add('selected');
+      } else {
+        b.classList.remove('selected');
+      }
+    });
+  }
+
+  updateQuizProgress();
+}
+
+function updateQuizProgress() {
+  const answeredCount = Object.keys(currentQuizAnswers).length;
+  const total = currentQuizQuestions.length;
+  const pct = total > 0 ? Math.round((answeredCount / total) * 100) : 0;
+
+  quizProgressText.textContent = `${total} Pertanyaan Modul`;
+  quizAnsweredBadge.textContent = `${answeredCount} dari ${total} Terjawab`;
+  quizProgressFill.style.width = `${pct}%`;
+
+  if (answeredCount === total) {
+    btnSubmitQuiz.disabled = false;
+    btnSubmitQuiz.classList.add('ready');
+  } else {
+    btnSubmitQuiz.disabled = true;
+    btnSubmitQuiz.classList.remove('ready');
+  }
+}
+
+function handleSubmitQuiz() {
+  stopQuizTimer();
+
+  const total = currentQuizQuestions.length;
+  let correctCount = 0;
+
+  const reviewListEl = document.getElementById('quiz-review-list');
+  reviewListEl.innerHTML = '';
+
+  currentQuizQuestions.forEach((q, idx) => {
+    const userChoice = currentQuizAnswers[q.id];
+    const isCorrect = userChoice === q.correctIndex;
+    if (isCorrect) correctCount++;
+
+    const reviewItem = document.createElement('div');
+    reviewItem.className = `quiz-review-item ${isCorrect ? 'correct' : 'wrong'}`;
+
+    let reviewOptionsHtml = '';
+    q.options.forEach((optText, optIdx) => {
+      let optClass = 'review-opt';
+      let tagHtml = '';
+
+      if (optIdx === q.correctIndex) {
+        optClass += ' opt-key';
+        tagHtml = '<span class="review-tag key">Kunci Jawaban Benar</span>';
+      }
+      if (optIdx === userChoice) {
+        if (isCorrect) {
+          optClass += ' opt-user-correct';
+          tagHtml = '<span class="review-tag user-correct">Jawaban Anda (Benar)</span>';
+        } else {
+          optClass += ' opt-user-wrong';
+          tagHtml = '<span class="review-tag user-wrong">Pilihan Anda (Salah)</span>';
+        }
+      }
+
+      reviewOptionsHtml += `
+        <div class="${optClass}">
+          <span class="opt-text">${optText}</span>
+          ${tagHtml}
+        </div>
+      `;
+    });
+
+    reviewItem.innerHTML = `
+      <div class="review-item-header">
+        <span class="review-number">Soal ${idx + 1}</span>
+        <span class="review-status-badge ${isCorrect ? 'correct' : 'wrong'}">
+          ${isCorrect ? '✅ Jawaban Anda Benar' : '❌ Jawaban Kurang Tepat'}
+        </span>
+      </div>
+      <h4 class="review-question-text">${q.question}</h4>
+      <div class="review-options-list">
+        ${reviewOptionsHtml}
+      </div>
+      <div class="ai-explanation-box">
+        <div class="ai-exp-header">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20"/><path d="m17 5-5-3-5 3"/><path d="m17 19-5 3-5-3"/><path d="M2 12h20"/><path d="m5 7-3 5 3 5"/><path d="m19 7 3 5-3 5"/></svg>
+          <strong>Pembahasan Logis AI:</strong>
+        </div>
+        <p class="ai-exp-text">${q.aiExplanation}</p>
+      </div>
+    `;
+
+    reviewListEl.appendChild(reviewItem);
+  });
+
+  const score = Math.round((correctCount / total) * 100);
+  document.getElementById('quiz-score-num').textContent = score;
+
+  const headlineEl = document.getElementById('quiz-score-headline');
+  const descEl = document.getElementById('quiz-score-desc');
+  if (score === 100) {
+    headlineEl.textContent = 'Luar Biasa! Skor Sempurna! 🌟';
+    descEl.textContent = `Hebat! Anda berhasil menjawab seluruh ${total} pertanyaan dengan tepat tanpa kesalahan.`;
+  } else if (score >= 70) {
+    headlineEl.textContent = 'Bagus Sekali! Pemahaman Mantap! 🎉';
+    descEl.textContent = `Anda berhasil menjawab ${correctCount} dari ${total} pertanyaan dengan benar. Pelajari catatan pembahasan AI di bawah untuk menyempurnakannya.`;
+  } else {
+    headlineEl.textContent = 'Tetap Semangat, Mari Pelajari Lagi! 💪';
+    descEl.textContent = `Anda menjawab ${correctCount} dari ${total} pertanyaan dengan benar. Simak ulasan pembahasan logis AI di bawah ini dan coba lagi (Try Again)!`;
+  }
+
+  document.getElementById('quiz-stat-correct').textContent = `✅ ${correctCount} Benar`;
+  document.getElementById('quiz-stat-wrong').textContent = `❌ ${total - correctCount} Salah`;
+
+  // Tampilkan waktu pengerjaan jika timer diaktifkan
+  if (isQuizTimerEnabled && quizStatTime) {
+    const elapsed = Math.max(quizTotalDurationSeconds - quizRemainingSeconds, 1);
+    quizStatTime.textContent = `⏱️ Waktu: ${formatSecondsToMMSS(elapsed)} / ${selectedTimerMinutes}m`;
+    quizStatTime.style.display = 'inline-flex';
+  } else if (quizStatTime) {
+    quizStatTime.style.display = 'none';
+  }
+
+  quizActivePanel.style.display = 'none';
+  quizResultPanel.style.display = 'block';
+
+  quizPageViewEl.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+// Event Listeners for Quiz Feature
+if (btnOpenQuizView) {
+  btnOpenQuizView.addEventListener('click', () => {
+    showQuizView();
+  });
+}
+
+if (btnQuizBackChat) {
+  btnQuizBackChat.addEventListener('click', () => {
+    showChatView();
+  });
+}
+
+if (btnResultBackChat) {
+  btnResultBackChat.addEventListener('click', () => {
+    showChatView();
+  });
+}
+
+// Question count presets selector
+const countOptBtns = document.querySelectorAll('.btn-count-opt');
+countOptBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    countOptBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const cnt = parseInt(btn.getAttribute('data-count'), 10) || 5;
+    selectedQuizCount = cnt;
+    if (quizCustomCountInput) {
+      quizCustomCountInput.value = cnt;
+    }
+  });
+});
+
+// Custom Question Count input listener (Bisa ketik nomor kustom sendiri)
+if (quizCustomCountInput) {
+  quizCustomCountInput.addEventListener('input', (e) => {
+    let val = parseInt(e.target.value, 10);
+    if (!isNaN(val) && val >= 1) {
+      if (val > 50) val = 50;
+      selectedQuizCount = val;
+
+      // Update highlight pada preset buttons jika nilainya cocok
+      countOptBtns.forEach(b => {
+        const bCount = parseInt(b.getAttribute('data-count'), 10);
+        if (bCount === val) {
+          b.classList.add('active');
+        } else {
+          b.classList.remove('active');
+        }
+      });
+    }
+  });
+}
+
+// Timer Toggle switch listener
+if (quizTimerToggle) {
+  quizTimerToggle.addEventListener('change', (e) => {
+    isQuizTimerEnabled = e.target.checked;
+    if (quizTimerOptions) {
+      quizTimerOptions.style.display = isQuizTimerEnabled ? 'block' : 'none';
+    }
+  });
+}
+
+// Timer Presets selector
+const timerOptBtns = document.querySelectorAll('.btn-timer-opt');
+timerOptBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    timerOptBtns.forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const mins = parseInt(btn.getAttribute('data-minutes'), 10) || 3;
+    selectedTimerMinutes = mins;
+    if (quizTimerCustomInput) {
+      quizTimerCustomInput.value = mins;
+    }
+  });
+});
+
+// Custom Timer Minutes input listener (Bisa atur menit sendiri)
+if (quizTimerCustomInput) {
+  quizTimerCustomInput.addEventListener('input', (e) => {
+    let val = parseInt(e.target.value, 10);
+    if (!isNaN(val) && val >= 1) {
+      if (val > 120) val = 120;
+      selectedTimerMinutes = val;
+
+      // Update highlight pada timer preset buttons jika nilainya cocok
+      timerOptBtns.forEach(b => {
+        const bMins = parseInt(b.getAttribute('data-minutes'), 10);
+        if (bMins === val) {
+          b.classList.add('active');
+        } else {
+          b.classList.remove('active');
+        }
+      });
+    }
+  });
+}
+
+if (btnStartQuiz) {
+  btnStartQuiz.addEventListener('click', handleStartQuiz);
+}
+
+if (btnSubmitQuiz) {
+  btnSubmitQuiz.addEventListener('click', handleSubmitQuiz);
+}
+
+if (btnTryAgainQuiz) {
+  btnTryAgainQuiz.addEventListener('click', () => {
+    handleStartQuiz();
+  });
+}
 
 // App Initialization
 document.addEventListener('DOMContentLoaded', () => {
