@@ -3488,21 +3488,23 @@ PANDUAN MUTLAK REVIEW MATERI (BERDASARKAN HASIL CHAT BERSAMA):
     const units = this.parseModuleUnits(moduleContent);
     // Ambil konsep-konsep substantif spesifik (bukan sekadar judul bab)
     const substantiveConcepts = units.filter(u => 
-      u.term && u.term.length >= 2 && u.explanation && u.explanation.length >= 10 &&
-      !/^(?:\d+[\.\)]\s+|bab\s+\d+|bagian\s+\d+)/i.test(u.term)
+      u.term && u.term.length >= 2 && u.explanation && u.explanation.length >= 2 &&
+      !this.isStructuralHeader(u.term) &&
+      u.type !== 'section' && u.type !== 'subgroup' &&
+      !/^(?:\d+[\.\)]\s+|bab\s+(?:[IVXLCDM]+|\d+)|bagian\s+\d+|topik\s+\d+|materi\s+\d+)/i.test(u.term)
     );
 
     if (substantiveConcepts.length > 0) {
       const chosen = substantiveConcepts.slice(0, 3);
       chosen.forEach((c, idx) => {
-        quizText += `**Soal ${idx + 1}:** Berdasarkan materi modul, jelaskan proses atau peranan penting yang berkaitan dengan **${c.term}**!\n`;
+        quizText += `**Soal ${idx + 1}:** Apa fungsi atau karakteristik penting dari **${c.term}**?\n`;
       });
     } else {
       const chunks = this.parseModuleChunks(moduleContent);
       const sample = chunks.slice(0, 3);
       sample.forEach((chunk, idx) => {
         const cleanTitle = chunk.title.replace(/^[=\-\*_~#+\d\.\)\-\s]+/, '').replace(/[=\-\*_~#+\s]+$/, '').trim();
-        quizText += `**Soal ${idx + 1}:** Jelaskan fakta dan intisari materi yang dipaparkan mengenai topik **${cleanTitle || 'ini'}**!\n`;
+        quizText += `**Soal ${idx + 1}:** Jelaskan intisari singkat mengenai topik **${cleanTitle || 'ini'}**!\n`;
       });
     }
 
@@ -3526,312 +3528,292 @@ PANDUAN MUTLAK REVIEW MATERI (BERDASARKAN HASIL CHAT BERSAMA):
     const titleLower = (moduleTitle || '').toLowerCase();
     const pool = [];
 
+    // Helper untuk membuat teks opsi pilihan ganda yang SINGKAT, PADAT, dan RAPI (maksimal 7-9 kata)
+    const cleanShortOption = (text, termToRemove = null) => {
+      if (!text || typeof text !== 'string') return '';
+      const rawLines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+      const cleanedParts = [];
+
+      for (const line of rawLines) {
+        // Hapus penomoran sub-poin (misal: "A. Di kepala" -> "Di kepala", "1. ..." -> "...")
+        let l = line.replace(/^(?:[A-Za-z\d][\.\)]|[-*•+])\s*/, '').trim();
+        l = l.replace(/^[=\-*_~#+\d\.\)\-\s:]+/, '').trim();
+
+        if (termToRemove) {
+          const esc = termToRemove.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+          l = l.replace(new RegExp(`^(?:di dalam|pada|organ|bagian)?\\s*${esc}\\s*(?:adalah|merupakan|berfungsi untuk|berperan dalam|yaitu|ialah|terjadi)?\\s*`, 'i'), '').trim();
+        }
+
+        // Hapus kopula pengantar yang panjang
+        l = l.replace(/^(?:adalah|merupakan|yaitu|ialah)\s+(?:suatu|sebuah)?\s*/i, '').trim();
+        if (l) cleanedParts.push(l);
+      }
+
+      let combined = cleanedParts.join('; ');
+      // Batasi maksimal 7-9 kata agar tidak menjadi kalimat panjang
+      const words = combined.split(/\s+/);
+      if (words.length > 8) {
+        combined = words.slice(0, 8).join(' ');
+      }
+
+      combined = combined.trim().replace(/[.;]+$/, '');
+      if (combined.length > 0) {
+        combined = combined.charAt(0).toUpperCase() + combined.slice(1);
+      }
+      return combined;
+    };
+
     // =========================================================================
-    // 1. QUESTION POOL SPESIFIK: EKONOMI & INFLASI
+    // 1. QUESTION POOL SPESIFIK: EKONOMI & INFLASI (Singkat & Jelas)
     // =========================================================================
     if (contentLower.includes('inflasi') || titleLower.includes('inflasi')) {
       pool.push({
         id: 'inf_1',
         topic: 'Definisi Inflasi',
-        question: 'Apa definisi paling mendasar dari fenomena inflasi dalam suatu perekonomian?',
-        correctText: 'Kenaikan harga barang dan jasa secara umum dan terus-menerus dalam periode waktu tertentu.',
+        question: 'Apa pengertian dari inflasi?',
+        correctText: 'Kenaikan harga barang secara umum dan terus-menerus.',
         distractors: [
-          'Kenaikan harga satu komoditas tertentu saja yang berlangsung sesaat karena kelangkaan musiman.',
-          'Penurunan jumlah uang yang beredar di masyarakat sehingga nilai nominal uang menjadi berlipat ganda.',
-          'Peningkatan daya beli riil masyarakat yang mendorong penurunan harga seluruh barang di pasar.'
+          'Kenaikan harga satu barang musiman.',
+          'Penurunan jumlah uang yang beredar.',
+          'Peningkatan daya beli uang secara drastis.'
         ],
-        aiExplanation: 'Secara prinsip ekonomi, inflasi bukanlah lonjakan harga satu komoditas musiman semata (seperti cabai saat gagal panen), melainkan kenaikan harga yang bersifat umum pada sebagian besar barang dan jasa secara terus-menerus. Akibatnya, nilai riil uang mengalami penurunan daya beli.'
+        aiExplanation: 'Inflasi adalah kenaikan harga barang dan jasa secara umum dan terus-menerus dalam periode waktu tertentu.'
       });
 
       pool.push({
         id: 'inf_2',
-        topic: 'Penyebab Inflasi (Demand-Pull)',
-        question: 'Kondisi manakah yang paling tepat menggambarkan terjadinya Demand-Pull Inflation?',
-        correctText: 'Tingginya permintaan agregat masyarakat terhadap barang dan jasa yang melampaui kapasitas produksi yang tersedia.',
+        topic: 'Penyebab Inflasi',
+        question: 'Demand-pull inflation terjadi karena...',
+        correctText: 'Permintaan barang tinggi melampaui kapasitas suplai.',
         distractors: [
-          'Kenaikan biaya bahan baku impor akibat depresiasi nilai tukar mata uang domestik.',
-          'Kenaikan upah buruh dan tarif listrik pabrik yang menekan batas keuntungan produsen.',
-          'Pemerintah menaikkan suku bunga acuan bank sentral sehingga minat meminjam kredit menurun drastis.'
+          'Kenaikan biaya bahan baku impor.',
+          'Kenaikan tarif listrik dan upah pekerja.',
+          'Pemerintah menaikkan suku bunga bank.'
         ],
-        aiExplanation: 'Demand-Pull Inflation dipicu dari sisi konsumen (permintaan). Ketika daya beli dan uang beredar tinggi, permintaan barang melonjak melebihi kapasitas suplai produsen (excess demand), sehingga harga pasar terdorong naik sesuai hukum penawaran dan permintaan.'
+        aiExplanation: 'Demand-pull inflation dipicu oleh lonjakan permintaan konsumen yang melebihi kemampuan produksi pasar.'
       });
 
       pool.push({
         id: 'inf_3',
-        topic: 'Penyebab Inflasi (Cost-Push)',
-        question: 'Manakah faktor pemicu utama timbulnya Cost-Push Inflation pada sektor industri?',
-        correctText: 'Kenaikan biaya operasional produksi seperti harga bahan bakar minyak (BBM), tarif energi, dan bahan baku.',
+        topic: 'Penyebab Inflasi',
+        question: 'Cost-push inflation dipicu oleh...',
+        correctText: 'Kenaikan biaya produksi seperti BBM dan bahan baku.',
         distractors: [
-          'Peningkatan jumlah bantuan tunai masyarakat yang membuat konsumsi barang sekunder meroket.',
-          'Masyarakat memindahkan simpanannya ke bank umum karena tingginya bunga deposito.',
-          'Penurunan tarif pajak pertambahan nilai (PPN) yang memicu gelombang pembelian produk massal.'
+          'Peningkatan jumlah uang di masyarakat.',
+          'Masyarakat gemar menabung di bank.',
+          'Penurunan tarif pajak barang impor.'
         ],
-        aiExplanation: 'Cost-Push Inflation berakar dari sisi produsen (penawaran). Ketika ongkos produksi naik akibat lonjakan tarif BBM industri, listrik, atau bahan baku, produsen terpaksa menaikkan harga jual produk akhir kepada konsumen agar tidak mengalami kerugian operasional.'
+        aiExplanation: 'Cost-push inflation terjadi ketika ongkos operasional dan bahan baku produsen melonjak naik.'
       });
 
       pool.push({
         id: 'inf_4',
-        topic: 'Kebijakan Moneter Inflasi',
-        question: 'Langkah apa yang biasanya diambil oleh Bank Sentral (Bank Indonesia) untuk menekan laju inflasi yang terlalu tinggi?',
-        correctText: 'Menaikkan suku bunga acuan (BI-Rate) dan menjual surat berharga (SBI) guna menyerap kelebihan likuiditas.',
+        topic: 'Kebijakan Moneter',
+        question: 'Cara Bank Indonesia menekan inflasi tinggi adalah...',
+        correctText: 'Menaikkan suku bunga acuan (BI-Rate).',
         distractors: [
-          'Menurunkan suku bunga kredit serendah mungkin agar masyarakat lebih banyak berbelanja secara konsumtif.',
-          'Mencetak uang kertas baru dalam jumlah melimpah untuk dibagikan secara gratis kepada produsen.',
-          'Menurunkan Giro Wajib Minimum (GWM) perbankan agar cadangan kas di bank umum makin longgar.'
+          'Menurunkan suku bunga kredit serendah mungkin.',
+          'Mencetak uang kertas baru sebanyak-banyaknya.',
+          'Mempermudah masyarakat mengambil pinjaman.'
         ],
-        aiExplanation: 'Bank Sentral menggunakan kebijakan moneter kontraktif. Dengan menaikkan suku bunga acuan (BI-Rate), masyarakat terdorong untuk menabung dan menahan pinjaman konsumtif. Penjualan surat berharga (SBI) juga secara efektif menyerap peredaran uang berlebih di masyarakat.'
+        aiExplanation: 'Menaikkan suku bunga acuan mendorong masyarakat menabung dan menahan belanja berlebih.'
       });
 
       pool.push({
         id: 'inf_5',
-        topic: 'Kebijakan Fiskal Inflasi',
-        question: 'Bagaimana peran Pemerintah dalam meredam inflasi melalui instrumen Kebijakan Fiskal?',
-        correctText: 'Melakukan penghematan belanja pengeluaran negara (APBN) dan menyeimbangkan regulasi tarif perpajakan.',
-        distractors: [
-          'Meningkatkan pinjaman komersial luar negeri untuk membiayai proyek konsumtif jangka pendek.',
-          'Menghentikan seluruh pemungutan pajak negara agar uang di saku masyarakat semakin banyak.',
-          'Menetapkan suku bunga tabungan di setiap bank umum secara sepihak tanpa koordinasi BI.'
-        ],
-        aiExplanation: 'Kebijakan fiskal dikelola oleh Pemerintah melalui APBN. Dengan mengerem belanja negara yang belum mendesak dan mengoptimalkan instrumen pajak, permintaan agregat nasional dapat distabilkan sehingga tekanan kenaikan harga mereda.'
-      });
-
-      pool.push({
-        id: 'inf_6',
         topic: 'Dampak Inflasi',
-        question: 'Siapakah kelompok yang paling merasakan dampak negatif penurunan kesejahteraan akibat inflasi yang tidak terkendali?',
-        correctText: 'Masyarakat berpendapatan tetap (seperti buruh upah harian dan pensiunan) serta penabung uang tunai.',
+        question: 'Pihak yang paling dirugikan saat terjadi inflasi adalah...',
+        correctText: 'Masyarakat berpenghasilan tetap dan penabung uang tunai.',
         distractors: [
-          'Pemilik aset riil seperti tanah, emas batangan, dan bangunan properti komersial.',
-          'Debitur atau pihak yang memiliki pinjaman dengan suku bunga pinjaman nominal yang tetap.',
-          'Pedagang komoditas besar yang dapat langsung menyesuaikan persentase margin keuntungan.'
+          'Pemilik aset tanah dan emas.',
+          'Debitur dengan bunga pinjaman tetap.',
+          'Pedagang komoditas ekspor.'
         ],
-        aiExplanation: 'Masyarakat berpenghasilan tetap sangat dirugikan karena nominal gaji mereka tidak bertambah, sementara harga kebutuhan pokok terus melambung tinggi. Nilai riil dari tabungan tunai juga tergerus oleh inflasi.'
+        aiExplanation: 'Masyarakat berpendapatan tetap dirugikan karena harga kebutuhan naik sementara gaji tidak bertambah.'
       });
     }
 
     // =========================================================================
-    // 2. QUESTION POOL SPESIFIK: BIOLOGI (SISTEM PENCERNAAN MANUSIA)
+    // 2. QUESTION POOL SPESIFIK: BIOLOGI (SISTEM PENCERNAAN) (Singkat & Jelas)
     // =========================================================================
     if (contentLower.includes('pencernaan') || contentLower.includes('mulut') || contentLower.includes('lambung') || titleLower.includes('pencernaan')) {
       pool.push({
         id: 'penc_1',
-        topic: 'Pencernaan di Rongga Mulut',
-        question: 'Proses pencernaan kimiawi di dalam rongga mulut dibantu oleh enzim ptialin (amilase) yang berfungsi untuk...',
-        correctText: 'Mengubah karbohidrat kompleks (amilum) menjadi maltosa.',
+        topic: 'Rongga Mulut',
+        question: 'Apa fungsi enzim ptialin (amilase) di dalam mulut?',
+        correctText: 'Mengubah amilum menjadi maltosa.',
         distractors: [
-          'Memecah protein menjadi pepton dan asam amino bebas.',
-          'Mengemulsi lemak menjadi droplet asam lemak dan gliserol.',
-          'Mengendapkan protein kasein di dalam cairan susu.'
+          'Mengubah protein menjadi pepton.',
+          'Mencerna lemak menjadi asam lemak.',
+          'Mengendapkan protein susu.'
         ],
-        aiExplanation: 'Kelenjar ludah di mulut mensekresikan enzim ptialin (amilase ludah) untuk memecah ikatan amilum (pati) menjadi disakarida maltosa dalam suasana pH netral.'
+        aiExplanation: 'Enzim ptialin (amilase ludah) berfungsi memecah karbohidrat amilum menjadi gula maltosa.'
       });
 
       pool.push({
         id: 'penc_2',
-        topic: 'Mekanisme Kerongkongan (Esofagus)',
-        question: 'Bagaimana cara bolus makanan bergerak menuruni kerongkongan (esofagus) menuju ke lambung?',
-        correctText: 'Didorong oleh gerak peristaltik akibat kontraksi dan relaksasi bergelombang otot dinding kerongkongan.',
+        topic: 'Kerongkongan',
+        question: 'Bagaimana cara makanan bergerak di dalam kerongkongan?',
+        correctText: 'Didorong oleh gerak peristaltik.',
         distractors: [
-          'Mengalir bebas semata-mata karena pengaruh gaya tarik gravitasi bumi.',
-          'Dilarutkan oleh getah empedu hingga mencair sepenuhnya di rongga dada.',
-          'Ditarik oleh tekanan hisap negatif yang dihasilkan saat paru-paru bernapas.'
+          'Mengalir karena gaya tarik gravitasi.',
+          'Dilarutkan oleh getah empedu.',
+          'Dihancurkan oleh otot rahang.'
         ],
-        aiExplanation: 'Kerongkongan tidak melakukan proses pencernaan kimiawi. Makanan didorong ke lambung melalui gerak peristaltik, yaitu gelombang kontraksi ritmis otot polos pada dinding kerongkongan.'
+        aiExplanation: 'Gerak peristaltik adalah gelombang kontraksi otot polos dinding kerongkongan untuk mendorong makanan ke lambung.'
       });
 
       pool.push({
         id: 'penc_3',
-        topic: 'Enzim dan Asam di Lambung',
-        question: 'Fungsi utama dari asam klorida (HCl) yang disekresikan oleh dinding lambung adalah...',
-        correctText: 'Membunuh bakteri patogen pada makanan serta mengaktifkan pepsinogen menjadi enzim pepsin aktif.',
+        topic: 'Lambung',
+        question: 'Fungsi utama asam klorida (HCl) di dalam lambung adalah...',
+        correctText: 'Membunuh kuman dan mengaktifkan pepsin.',
         distractors: [
-          'Menetralkan asam makanan agar suasana lambung menjadi basa.',
-          'Mengubah glukosa berlebih menjadi cadangan glikogen hati.',
-          'Menyerap vitamin dan garam mineral langsung ke pembuluh limfa.'
+          'Menetralkan asam makanan jadi basa.',
+          'Menyerap vitamin dan mineral ke darah.',
+          'Mengubah gula menjadi glikogen.'
         ],
-        aiExplanation: 'Asam lambung (HCl) menciptakan suasana asam pekat (pH 1-2) yang mematikan kuman pada makanan serta memicu aktivasi proenzim pepsinogen menjadi enzim pepsin aktif untuk mencerna protein.'
+        aiExplanation: 'Asam klorida (HCl) menciptakan suasana asam untuk membunuh bakteri patogen dan mengaktifkan enzim pepsin.'
       });
 
       pool.push({
         id: 'penc_4',
-        topic: 'Fungsi Organ Pencernaan',
-        question: 'Organ berbentuk kantung tempat berlangsungnya pencernaan mekanis oleh otot dinding serta pencernaan kimiawi oleh enzim pepsin dan renin adalah...',
+        topic: 'Organ Lambung',
+        question: 'Organ berbentuk kantung yang menghasilkan enzim pepsin dan asam lambung adalah...',
         correctText: 'Lambung.',
         distractors: [
-          'Kerongkongan (Esofagus).',
-          'Rongga Mulut.',
-          'Kelenjar Ludah.'
+          'Kerongkongan.',
+          'Rongga mulut.',
+          'Usus halus.'
         ],
-        aiExplanation: 'Lambung memiliki dinding otot tebal yang mengaduk makanan (pencernaan mekanis) serta getah lambung yang mengandung pepsin, renin, dan HCl (pencernaan kimiawi).'
+        aiExplanation: 'Lambung adalah organ berkantung tempat pencernaan mekanis oleh otot dinding dan kimiawi oleh getah lambung.'
       });
 
       pool.push({
         id: 'penc_5',
         topic: 'Kelenjar Pencernaan',
-        question: 'Apakah peranan utama dari kelenjar pencernaan dalam proses pengolahan makanan di dalam tubuh?',
-        correctText: 'Menghasilkan getah atau enzim pencernaan yang membantu memecah zat makanan secara kimiawi.',
+        question: 'Fungsi utama kelenjar pencernaan dalam tubuh adalah...',
+        correctText: 'Menghasilkan enzim pencerna makanan.',
         distractors: [
-          'Mengunyah dan menghaluskan makanan secara mekanis menggunakan struktur keras.',
-          'Menampung sisa ampas makanan sebelum dikeluarkan dari tubuh dalam bentuk feses.',
-          'Mengedarkan nutrisi makanan langsung ke seluruh sel melalui pembuluh darah arteri.'
+          'Menghaluskan makanan dengan gigi.',
+          'Menampung sisa ampas makanan.',
+          'Mengedarkan darah ke seluruh tubuh.'
         ],
-        aiExplanation: 'Kelenjar pencernaan (seperti kelenjar ludah, pankreas, dan hati) bertugas menghasilkan sekresi getah atau enzim kimiawi guna memecah molekul makanan makro menjadi zat yang dapat diserap tubuh.'
+        aiExplanation: 'Kelenjar pencernaan (kelenjar ludah, pankreas, hati) bertugas memproduksi enzim kimiawi pemecah makanan.'
       });
     }
 
     // =========================================================================
-    // 3. QUESTION POOL SPESIFIK: FISIKA (HUKUM NEWTON & MEKANIKA)
+    // 3. QUESTION POOL SPESIFIK: FISIKA (HUKUM NEWTON) (Singkat & Jelas)
     // =========================================================================
     if (contentLower.includes('newton') || titleLower.includes('fisika') || titleLower.includes('newton')) {
       pool.push({
         id: 'newt_1',
         topic: 'Hukum I Newton',
-        question: 'Kondisi manakah yang paling tepat mewakili berlakunya Hukum I Newton (Kelembaman)?',
-        correctText: 'Benda akan tetap diam atau bergerak lurus beraturan jika total resultan gaya luar yang bekerja padanya bernilai nol (ΣF = 0).',
+        question: 'Menurut Hukum I Newton, benda akan tetap diam jika...',
+        correctText: 'Resultan gaya yang bekerja sama dengan nol (ΣF = 0).',
         distractors: [
-          'Benda akan selalu mengalami percepatan konstan meskipun tidak ada gaya luar yang mengenainya.',
-          'Besarnya percepatan gerak selalu sebanding dengan kuadrat jarak tempuh benda terhadap titik gravitasi.',
-          'Setiap aksi gaya yang diberikan selalu menghasilkan energi kinetik yang habis menjadi panas.'
+          'Benda mengalami percepatan konstan.',
+          'Gaya dorong lebih besar dari gaya gesek.',
+          'Benda ditarik gravitasi bumi.'
         ],
-        aiExplanation: 'Hukum I Newton (hukum inersia) menjelaskan bahwa benda mempertahankan keadaan geraknya semula. Bila tidak ada resultan gaya (ΣF = 0), benda yang diam akan selamanya diam, dan benda yang bergerak akan terus bergerak lurus dengan kecepatan konstan.'
+        aiExplanation: 'Hukum I Newton (kelembaman) menyatakan benda diam akan tetap diam jika total resultan gaya luar bernilai nol.'
       });
 
       pool.push({
         id: 'newt_2',
         topic: 'Hukum II Newton',
-        question: 'Berdasarkan Hukum II Newton, bagaimanakah hubungan antara gaya resultan (F), massa benda (m), dan percepatan (a)?',
-        correctText: 'Percepatan benda berbanding lurus dengan resultan gaya total dan berbanding terbalik dengan massa benda (a = F / m).',
+        question: 'Berdasarkan Hukum II Newton, percepatan benda berbanding terbalik dengan...',
+        correctText: 'Massa benda (m).',
         distractors: [
-          'Semakin besar massa suatu benda, maka percepatan geraknya akan otomatis bertambah cepat.',
-          'Percepatan gerak berbanding terbalik dengan besar gaya total yang bekerja pada benda.',
-          'Massa dan percepatan selalu bernilai konstan dan tidak dipengaruhi oleh resultan gaya luar.'
+          'Resultan gaya (F).',
+          'Kecepatan awal gerak.',
+          'Jarak tempuh benda.'
         ],
-        aiExplanation: 'Menurut persamaan ΣF = m · a, gaya berbanding lurus dengan percepatan, tetapi massa berbanding terbalik dengan percepatan. Artinya, mendorong benda bermassa besar membutuhkan gaya lebih besar untuk menghasilkan percepatan yang sama.'
+        aiExplanation: 'Sesuai persamaan a = F / m, makin besar massa suatu benda maka percepatannya akan semakin kecil.'
       });
 
       pool.push({
         id: 'newt_3',
         topic: 'Hukum III Newton',
-        question: 'Manakah karakteristik yang BENAR mengenai pasangan gaya aksi dan reaksi pada Hukum III Newton?',
-        correctText: 'Bekerja pada dua benda yang berbeda, besarnya persis sama, tetapi arah garis kerjanya berlawanan.',
+        question: 'Karakteristik pasangan gaya aksi-reaksi adalah...',
+        correctText: 'Bekerja pada dua benda berbeda dan berlawanan arah.',
         distractors: [
-          'Bekerja pada satu benda yang sama sehingga gaya aksi dan reaksi selalu saling meniadakan menjadi nol.',
-          'Gaya reaksi selalu muncul beberapa detik setelah gaya aksi berhenti bekerja sepenuhnya.',
-          'Besar gaya reaksi selalu lebih kecil daripada gaya aksi karena adanya gesekan udara.'
+          'Bekerja pada satu benda yang sama.',
+          'Besarnya selalu menghasilkan nilai nol.',
+          'Muncul bergantian secara bertahap.'
         ],
-        aiExplanation: 'Karakteristik mutlak gaya aksi-reaksi adalah: bekerja pada dua benda yang berbeda (karena itu TIDAK saling meniadakan), timbul secara bersamaan (simultan), sama besar, dan berlawanan arah (F_aksi = -F_reaksi).'
+        aiExplanation: 'Gaya aksi dan reaksi bekerja pada dua benda berbeda secara simultan dengan arah berlawanan.'
       });
 
       pool.push({
         id: 'newt_4',
-        topic: 'Penerapan Hukum Newton',
-        question: 'Ketika bus yang melaju kencang mendadak direm, tubuh penumpang terdorong ke depan. Fenomena ini merupakan bukti langsung dari...',
-        correctText: 'Sifat inersia / kelembaman benda untuk mempertahankan kondisi geraknya semula.',
+        topic: 'Kelembaman',
+        question: 'Tubuh terdorong ke depan saat bus direm mendadak karena...',
+        correctText: 'Sifat kelembaman (inersia) tubuh.',
         distractors: [
-          'Pengaruh gravitasi bumi yang menarik massa tubuh secara mendatar ke depan.',
-          'Gaya gesekan ban dengan aspal yang menarik tubuh pengemudi maju.',
-          'Hukum kekekalan momentum sudut pada poros roda kendaraan.'
+          'Pengaruh gravitasi horizontal bumi.',
+          'Gaya gesekan ban dengan aspal.',
+          'Dorongan udara di dalam kabin.'
         ],
-        aiExplanation: 'Tubuh penumpang memiliki inersia untuk tetap mempertahankan keadaan gerak majunya. Ketika mobil direm mendadak oleh gaya gesek roda, tubuh yang belum menerima gaya rem langsung akan cenderung terus melaju ke depan.'
+        aiExplanation: 'Tubuh penumpang memiliki sifat inersia untuk mempertahankan gerak majunya saat kendaraan direm.'
       });
     }
 
     // =========================================================================
-    // 4. QUESTION POOL SPESIFIK: BIOLOGI (SISTEM PEREDARAN DARAH)
+    // 4. QUESTION POOL SPESIFIK: BIOLOGI (PEREDARAN DARAH) (Singkat & Jelas)
     // =========================================================================
     if (contentLower.includes('darah') || contentLower.includes('jantung') || titleLower.includes('darah')) {
       pool.push({
         id: 'bio_1',
-        topic: 'Sel Darah Merah (Eritrosit)',
-        question: 'Apa fungsi utama sel darah merah (eritrosit) dan ciri khas bentuk strukturnya pada manusia?',
-        correctText: 'Mengikat dan mengangkut oksigen berkat hemoglobin, berbentuk cakram bikonkaf tanpa inti sel matang.',
+        topic: 'Sel Darah Merah',
+        question: 'Fungsi utama sel darah merah (eritrosit) adalah...',
+        correctText: 'Mengangkut oksigen ke seluruh sel tubuh.',
         distractors: [
-          'Menghasilkan antibodi kekebalan tubuh dan memiliki banyak inti sel yang aktif membelah.',
-          'Membentuk jaring fibrin penutup luka dan tidak mengandung pigmen protein sama sekali.',
-          'Mengatur keseimbangan hormon insulin dan menyaring racun di dalam organ ginjal.'
+          'Membunuh bakteri penyebab infeksi.',
+          'Membekukan luka pada pembuluh darah.',
+          'Menghasilkan antibodi kekebalan.'
         ],
-        aiExplanation: 'Eritrosit matang berbentuk cakram bikonkaf dan melepaskan inti selnya untuk memberikan ruang maksimum bagi molekul hemoglobin, protein pengikat oksigen dari paru-paru menuju seluruh sel tubuh.'
+        aiExplanation: 'Eritrosit mengandung hemoglobin yang mengikat dan mendistribusikan oksigen dari paru-paru ke seluruh tubuh.'
       });
 
       pool.push({
         id: 'bio_2',
-        topic: 'Sel Darah Putih (Leukosit)',
-        question: 'Kemampuan sel leukosit untuk menembus celah dinding kapiler darah guna membasmi bakteri di jaringan tubuh disebut...',
+        topic: 'Sel Darah Putih',
+        question: 'Kemampuan leukosit menembus dinding pembuluh darah disebut...',
         correctText: 'Diapedesis.',
         distractors: [
           'Hemostasis.',
           'Aglutinasi.',
           'Eritropoiesis.'
         ],
-        aiExplanation: 'Diapedesis adalah kemampuan unik leukosit bergerak secara amuboid melintasi pori-pori dinding pembuluh kapiler darah demi menjangkau jaringan tubuh yang terinfeksi patogen atau kuman penyakit.'
+        aiExplanation: 'Diapedesis adalah kemampuan gerak leukosit melewati pori kapiler darah menuju jaringan yang terinfeksi.'
       });
 
       pool.push({
         id: 'bio_3',
-        topic: 'Keping Darah & Pembekuan',
-        question: 'Pada proses hemostasis saat terjadi luka, enzim apakah yang mengubah protrombin menjadi trombin?',
-        correctText: 'Trombokinase (tromboplastin) dengan bantuan ion kalsium dan vitamin K.',
+        topic: 'Pembekuan Darah',
+        question: 'Enzim yang mengubah protrombin menjadi trombin saat luka adalah...',
+        correctText: 'Trombokinase (tromboplastin).',
         distractors: [
-          'Enzim amilase dengan bantuan zat besi dan vitamin C.',
-          'Enzim pepsin yang disekresikan oleh sel plasma darah.',
-          'Enzim lipase yang diaktifkan oleh hemoglobin bebas.'
+          'Enzim amilase.',
+          'Enzim pepsin.',
+          'Enzim lipase.'
         ],
-        aiExplanation: 'Saat trombosit pecah menyentuh permukaan luka yang kasar, enzim tromboplastin dilepaskan. Bersama kalsium (Ca2+) dan vitamin K, enzim ini memicu pengubahan protrombin menjadi trombin, yang kemudian mengubah fibrinogen menjadi jala benang fibrin.'
+        aiExplanation: 'Trombokinase dilepaskan saat trombosit pecah untuk memicu pembentukan benang fibrin penutup luka.'
       });
     }
 
     // =========================================================================
-    // 5. QUESTION POOL SPESIFIK: MATEMATIKA (ALJABAR & PERSAMAAN KUADRAT)
-    // =========================================================================
-    if (contentLower.includes('aljabar') || contentLower.includes('kuadrat') || titleLower.includes('kuadrat')) {
-      pool.push({
-        id: 'mat_1',
-        topic: 'Diskriminan Persamaan Kuadrat',
-        question: 'Jika nilai diskriminan (D = b² - 4ac) dari persamaan kuadrat bernilai lebih besar dari nol (D > 0), maka persamaan tersebut...',
-        correctText: 'Memiliki dua akar real yang berlainan / berbeda (kurva memotong sumbu X di 2 titik).',
-        distractors: [
-          'Memiliki dua akar real yang kembar / sama persis (menyinggung sumbu X di 1 titik).',
-          'Tidak memiliki akar real sama sekali (akarnya berupa bilangan imajiner / kompleks).',
-          'Nilai variabel x tidak dapat diselesaikan dengan rumus ABC.'
-        ],
-        aiExplanation: 'Nilai diskriminan menentukan jenis akar kuadrat. Jika D > 0, akar di bawah tanda akar pada rumus ABC bernilai positif, menghasilkan dua solusi nyata yang berbeda (+√D dan -√D).'
-      });
-
-      pool.push({
-        id: 'mat_2',
-        topic: 'Unsur Bentuk Aljabar',
-        question: 'Pada bentuk aljabar 4x² - 7x + 9, angka -7 berkedudukan sebagai...',
-        correctText: 'Koefisien dari variabel x.',
-        distractors: [
-          'Konstanta mandiri dari suku kuadrat.',
-          'Eksponen pangkat tertinggi variabel.',
-          'Variabel peubah yang belum diketahui nilainya.'
-        ],
-        aiExplanation: 'Koefisien adalah faktor pengali yang mendampingi variabel. Pada suku -7x, variabelnya adalah x, dan bilangan yang mengalikannya adalah -7, sedangkan 9 adalah konstanta tetap.'
-      });
-    }
-
-    // =========================================================================
-    // 6. DYNAMIC QUESTION BUILDER: UNTUK MODUL CUSTOM / TEKS MATERI PENGGUNA
-    //    Menghasilkan pertanyaan materi substantif (bukan judul bab)
-    //    Menghasilkan opsi jawaban realistis dari materi modul (tanpa template klise)
+    // 5. DYNAMIC QUESTION BUILDER: UNTUK MODUL PENGGUNA
+    //    Format pertanyaan simpel, pendek, dan pilihan jawaban ringkas
     // =========================================================================
     const units = this.parseModuleUnits(moduleContent);
-    
-    // Fungsi pembantu membersihkan sub-huruf dari opsi kuis (misal: "A. Di kepala" -> "Di kepala")
-    const cleanQuizOption = (text) => {
-      if (!text || typeof text !== 'string') return '';
-      const parts = text.split(/\r?\n/)
-        .map(l => l.replace(/^(?:[A-Za-z\d][\.\)]|[-*•+])\s*/, '').trim())
-        .filter(Boolean);
-      return parts.join('; ');
-    };
 
-    // Filter konsep-konsep substantif materi: memiliki term dan penjelasan yang nyata
+    // Filter konsep-konsep materi substantif: hindari label struktural (TOPIK, BAB, MATERI PELAJARAN)
     const conceptUnits = units.filter(u => {
       if (!u.term || u.term.trim().length < 2) return false;
-      if (!u.explanation || u.explanation.trim().length < 3) return false;
-      // JANGAN PERNAH gunakan judul seksi/bab atau label struktural (TOPIK, BAB, MATERI PELAJARAN)
+      if (!u.explanation || u.explanation.trim().length < 2) return false;
       if (u.type === 'section' || u.type === 'subgroup') return false;
       if (this.isStructuralHeader(u.term)) return false;
       if (this.isStructuralHeader(u.text)) return false;
@@ -3839,29 +3821,7 @@ PANDUAN MUTLAK REVIEW MATERI (BERDASARKAN HASIL CHAT BERSAMA):
       return !isRawChapterHeader;
     });
 
-    // Ekstraksi kalimat-kalimat substantif dari seluruh teks modul sebagai opsi alternatif cadangan
-    const allModuleSentences = moduleContent
-      .split(/(?:\r?\n)+|(?<!\b(?:moh|dr|prof|ir|drs|no|tn|ny|hal))\.(?:\s+|$)/i)
-      .map(s => s.trim())
-      .filter(s => {
-        if (s.length < 25) return false;
-        if (/^[=\-*_~#+]{2,}$/.test(s)) return false;
-        if (/^(?:MODUL|BAB|BAGIAN|RINGKASAN|DAFTAR)/i.test(s)) return false;
-        if (/^[A-Z0-9\s\-_]+$/.test(s) && s.split(/\s+/).length <= 6) return false;
-        return true;
-      });
-
-    // Ekstraksi entitas atau istilah yang ada di teks modul
-    const allModuleEntities = [];
-    const entityMatches = moduleContent.match(/[A-Z][a-z]+(?:[ \t]+[A-Z][a-z]+)*/g) || [];
-    entityMatches.forEach(em => {
-      const cleanEm = em.replace(/[\r\n]+/g, ' ').trim();
-      if (cleanEm.length >= 4 && !allModuleEntities.includes(cleanEm) && !/^(?:Modul|Bab|Bagian|Pilihan|Jawaban|Soal)/i.test(cleanEm)) {
-        allModuleEntities.push(cleanEm);
-      }
-    });
-
-    // Sanitizer opsi jawaban agar tidak pernah menggunakan frasa klise/template atau judul struktural
+    // Sanitizer opsi jawaban: singkirkan label struktural dan template klise
     const sanitizeOption = (text, fallback) => {
       if (!text || typeof text !== 'string') return fallback;
       const clean = text.replace(/^[=\-*_~#+\d\.\)\-\s]+/, '').trim();
@@ -3875,141 +3835,105 @@ PANDUAN MUTLAK REVIEW MATERI (BERDASARKAN HASIL CHAT BERSAMA):
     if (conceptUnits.length >= 2) {
       conceptUnits.forEach((unit, idx) => {
         const cleanTerm = unit.term.replace(/^[=\-*_~#+\d\.\)\-\s]+/, '').trim();
-        let cleanExp = cleanQuizOption(unit.explanation);
-        if (!cleanExp.endsWith('.')) cleanExp += '.';
+        const shortCorrect = cleanShortOption(unit.explanation, cleanTerm);
 
-        // Ambil penjelasan dari unit lain dalam modul yang sama sebagai opsi pengecoh realistis
+        // Ambil penjelasan dari unit lain dalam modul sebagai pengecoh ringkas
         const otherUnits = conceptUnits.filter(o => o !== unit && o.term !== unit.term);
-        const distractorExps = otherUnits.map(o => {
-          let exp = cleanQuizOption(o.explanation);
-          if (!exp.endsWith('.')) exp += '.';
-          return exp;
-        });
+        const shortDistractors = otherUnits.map(o => cleanShortOption(o.explanation, o.term));
 
-        // Jika opsi masih kurang dari 3, ambil kalimat faktual lain dari modul
-        allModuleSentences.forEach(s => {
-          let cleanS = s.endsWith('.') ? s : s + '.';
-          if (cleanS.toLowerCase() !== cleanExp.toLowerCase() && !distractorExps.includes(cleanS) && distractorExps.length < 3) {
-            distractorExps.push(cleanS);
-          }
-        });
+        const fallbackOptions = [
+          'Saluran penghubung antar organ terkait.',
+          'Pengatur aliran zat di dalam sistem.',
+          'Penjaga kestabilan kondisi materi.',
+          'Penyerap zat pendukung secara bertahap.'
+        ];
 
-        const d1 = distractorExps[0] || 'Proses tersebut berlangsung secara pasif tanpa melibatkan aktivasi kimiawi.';
-        const d2 = distractorExps[1] || 'Kondisi ini berfungsi sebagai tahap pengujian awal dalam siklus materi.';
-        const d3 = distractorExps[2] || 'Mekanisme ini bertindak sebagai faktor pendukung dalam kondisi spesifik.';
+        // FORMAT 1: Pertanyaan Fungsi / Posisi yang Singkat & Jelas
+        const isLoc = /(?:kepala|leher|dada|perut|rongga|letak|posisi|berada)/i.test(shortCorrect);
+        const qText1 = isLoc ? `Di mana letak dari ${cleanTerm}?` : `Apa fungsi atau karakteristik dari ${cleanTerm}?`;
 
-        // STRATEGI A: Pertanyaan Fungsi / Karakteristik Materi Konsep
+        const correctAns1 = shortCorrect.endsWith('.') ? shortCorrect : shortCorrect + '.';
+        const d1 = shortDistractors[0] ? (shortDistractors[0].endsWith('.') ? shortDistractors[0] : shortDistractors[0] + '.') : fallbackOptions[0];
+        const d2 = shortDistractors[1] ? (shortDistractors[1].endsWith('.') ? shortDistractors[1] : shortDistractors[1] + '.') : fallbackOptions[1];
+        const d3 = shortDistractors[2] ? (shortDistractors[2].endsWith('.') ? shortDistractors[2] : shortDistractors[2] + '.') : fallbackOptions[2];
+
         pool.push({
           id: `dyn_c_${idx + 1}`,
           topic: cleanTerm,
-          question: `Berdasarkan modul, apa fungsi atau proses utama yang berlangsung pada "${cleanTerm}"?`,
-          correctText: cleanExp,
+          question: qText1,
+          correctText: correctAns1,
           distractors: [
-            sanitizeOption(d1, 'Proses tersebut berlangsung secara teratur sesuai tahapan standar sistem.'),
-            sanitizeOption(d2, 'Mekanisme ini menjaga kestabilan kondisi materi dari pengaruh luar.'),
-            sanitizeOption(d3, 'Tahapan ini bertindak sebagai pengantar menuju proses lanjutan.')
+            sanitizeOption(d1, fallbackOptions[0]),
+            sanitizeOption(d2, fallbackOptions[1]),
+            sanitizeOption(d3, fallbackOptions[2])
           ],
-          aiExplanation: `Materi modul menerangkan bahwa pada "${cleanTerm}", proses utamanya adalah: ${cleanExp} Pilihan lainnya merupakan fungsi atau karakteristik yang berlangsung pada bagian materi berbeda.`
+          aiExplanation: `Berdasarkan isi modul, ${cleanTerm} memiliki karakteristik: ${shortCorrect}.`
         });
 
-        // STRATEGI B: Pertanyaan Identifikasi Istilah / Konsep (Tebak Nama Bagian)
+        // FORMAT 2: Tebak Nama Bagian / Istilah (Pilihan Jawaban Nama Konsep Singkat)
         if (otherUnits.length >= 2) {
-          // Buat kalimat tebakan tanpa membocorkan langsung nama term di awal kalimat
-          let clueSentence = cleanExp;
-          const escapedTerm = cleanTerm.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
-          const termRegex = new RegExp(`^(?:di dalam|pada|organ|bagian)?\\s*${escapedTerm}\\s*(?:adalah|merupakan|berfungsi untuk|berperan dalam|yaitu|ialah|terjadi)?\\s*`, 'i');
-          if (termRegex.test(clueSentence)) {
-            clueSentence = clueSentence.replace(termRegex, '');
-            if (clueSentence.length > 0) {
-              clueSentence = clueSentence.charAt(0).toUpperCase() + clueSentence.slice(1);
-            }
-          }
-
+          const qText2 = `Bagian yang memiliki karakteristik "${shortCorrect}" adalah...`;
           const otherTerms = otherUnits.map(o => o.term.replace(/^[=\-*_~#+\d\.\)\-\s]+/, '').trim());
-          
-          // Lengkapi opsi istilah dari entitas lain di modul jika kurang dari 3
-          allModuleEntities.forEach(ent => {
-            if (ent !== cleanTerm && !otherTerms.includes(ent) && otherTerms.length < 3) {
-              otherTerms.push(ent);
-            }
-          });
-
-          const dt1 = otherTerms[0] || 'Faktor Primer';
-          const dt2 = otherTerms[1] || 'Komponen Sekunder';
-          const dt3 = otherTerms[2] || 'Parameter Regulasi';
 
           pool.push({
             id: `dyn_id_${idx + 1}`,
-            topic: `Identifikasi: ${cleanTerm}`,
-            question: `Bagian atau konsep manakah yang memiliki karakteristik materi: "${clueSentence}"?`,
+            topic: cleanTerm,
+            question: qText2,
             correctText: cleanTerm,
             distractors: [
-              sanitizeOption(dt1, 'Faktor Penentu'),
-              sanitizeOption(dt2, 'Komponen Pendukung'),
-              sanitizeOption(dt3, 'Unsur Transisi')
+              sanitizeOption(otherTerms[0] || 'Organ Pendukung', 'Organ Pendukung'),
+              sanitizeOption(otherTerms[1] || 'Saluran Tambahan', 'Saluran Tambahan'),
+              sanitizeOption(otherTerms[2] || 'Jaringan Terkait', 'Jaringan Terkait')
             ],
-            aiExplanation: `Uraian materi tersebut secara spesifik menggambarkan karakteristik dan peranan dari "${cleanTerm}". Bagian lain memiliki fungsi yang berbeda di dalam modul.`
+            aiExplanation: `Karakteristik tersebut merupakan fungsi atau penjelasan dari ${cleanTerm}.`
           });
         }
       });
     } else {
-      // Jika modul berupa narasi umum tanpa banyak sub-poin terpisah:
-      // Ekstraksi kalimat-kalimat fakta penting substantif (bukan judul/heading)
-      const rawSentences = moduleContent
+      // Modul narasi pendek: buat pertanyaan fakta yang ringkas
+      const sentences = moduleContent
         .split(/(?:\r?\n)+|(?<!\b(?:moh|dr|prof|ir|drs|no|tn|ny|hal))\.(?:\s+|$)/i)
-        .map(s => s.trim())
-        .filter(s => {
-          if (s.length < 30) return false;
-          if (/^[=\-*_~#+]{2,}$/.test(s)) return false;
-          if (/^(?:MODUL|BAB|BAGIAN|RINGKASAN|DAFTAR)/i.test(s)) return false;
-          // Jangan masukkan judul berkata pendek atau huruf kapital semua
-          if (/^[A-Z0-9\s\-_]+$/.test(s) && s.split(/\s+/).length <= 6) return false;
-          if (s.split(/\s+/).length < 5) return false;
-          return true;
-        });
+        .map(s => cleanShortOption(s))
+        .filter(s => s.length >= 10 && !this.isStructuralHeader(s));
 
-      if (rawSentences.length >= 2) {
-        for (let i = 0; i < Math.min(rawSentences.length, 6); i++) {
-          const mainSentence = rawSentences[i];
-          const otherSentences = rawSentences.filter((_, sIdx) => sIdx !== i);
-          
-          const d1 = otherSentences[0] || 'Proses tersebut berlangsung secara pasif tanpa memerlukan aktivasi awal.';
-          const d2 = otherSentences[1] || 'Kondisi materi ini tidak berkaitan langsung dengan dinamika sistem.';
-          const d3 = otherSentences[2] || 'Mekanisme ini bekerja dengan menekan laju reaksi ke batas minimum.';
+      if (sentences.length >= 2) {
+        for (let i = 0; i < Math.min(sentences.length, 5); i++) {
+          const mainSentence = sentences[i];
+          const otherSentences = sentences.filter((_, sIdx) => sIdx !== i);
 
           pool.push({
             id: `dyn_s_${i + 1}`,
-            topic: `Materi Modul`,
-            question: `Berdasarkan materi modul pembelajaran, manakah pernyataan faktual yang benar?`,
+            topic: 'Materi Pembelajaran',
+            question: 'Manakah pernyataan yang paling tepat sesuai modul?',
             correctText: mainSentence.endsWith('.') ? mainSentence : mainSentence + '.',
             distractors: [
-              sanitizeOption(d1.endsWith('.') ? d1 : d1 + '.', 'Mekanisme ini tidak memerlukan aktivasi energi awal.'),
-              sanitizeOption(d2.endsWith('.') ? d2 : d2 + '.', 'Reaksi berlangsung secara spontan tanpa perantara biologis.'),
-              sanitizeOption(d3.endsWith('.') ? d3 : d3 + '.', 'Faktor lingkungan menjadi penentu tunggal tanpa dipengaruhi struktur dasar.')
+              sanitizeOption((otherSentences[0] || 'Berlangsung secara pasif tanpa perubahan struktur.') + '.', 'Berlangsung secara pasif tanpa perubahan struktur.'),
+              sanitizeOption((otherSentences[1] || 'Berfungsi sebagai parameter pembanding awal.') + '.', 'Berfungsi sebagai parameter pembanding awal.'),
+              sanitizeOption((otherSentences[2] || 'Mekanisme ini bertindak sebagai faktor pendukung.') + '.', 'Mekanisme ini bertindak sebagai faktor pendukung.')
             ],
-            aiExplanation: `Berdasarkan uraian isi modul, fakta yang benar adalah: "${mainSentence}". Pilihan jawaban lain memuat uraian dari bagian berbeda atau tidak selaras dengan prinsip materi modul.`
+            aiExplanation: `Pernyataan yang tepat sesuai isi modul adalah: "${mainSentence}".`
           });
         }
       }
     }
 
-    // Fallback darurat jika teks modul benar-benar kosong
+    // Fallback darurat jika modul kosong
     if (pool.length === 0) {
       pool.push({
         id: 'gen_1',
-        topic: 'Pemahaman Modul',
-        question: `Apa tujuan utama mempelajari materi "${moduleTitle || 'Pelajaran'}" secara mendalam?`,
-        correctText: 'Memahami mekanisme kerja, prinsip dasar materi, dan keterkaitan sebab-akibat antar konsep.',
+        topic: 'Pemahaman Materi',
+        question: 'Apa tujuan utama mempelajari modul ini?',
+        correctText: 'Memahami konsep dasar dan fungsinya secara tepat.',
         distractors: [
-          'Hanya menghafal istilah tanpa memahami penerapan dan proses nyatanya.',
-          'Mengabaikan tahapan proses yang dipaparkan dalam modul pembelajaran.',
-          'Menyamaratakan semua karakteristik konsep tanpa melihat perbedaannya.'
+          'Hanya menghafal istilah tanpa memahami artinya.',
+          'Mengabaikan tahapan proses yang dipelajari.',
+          'Menyamaratakan semua peran organ tanpa pembeda.'
         ],
-        aiExplanation: 'Tujuan utama pembelajaran modul ini adalah memahami landasan konseptual, fungsi, dan aplikasi logis dari topik materi secara terstruktur.'
+        aiExplanation: 'Tujuan modul adalah memahami konsep dasar dan fungsi materi secara terstruktur.'
       });
     }
 
-    // Acak urutan seluruh bank soal (Fisher-Yates Shuffle)
+    // Acak urutan bank soal (Fisher-Yates Shuffle)
     for (let i = pool.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
       [pool[i], pool[j]] = [pool[j], pool[i]];
@@ -4018,18 +3942,17 @@ PANDUAN MUTLAK REVIEW MATERI (BERDASARKAN HASIL CHAT BERSAMA):
     // Ambil sejumlah count yang diinginkan user
     const selected = pool.slice(0, Math.min(count, pool.length));
 
-    // Acak opsi jawaban (A, B, C, D) untuk tiap soal
+    // Acak opsi jawaban (A, B, C, D) untuk tiap soal dengan pengecekan keunikan ketat
     return selected.map((item, qIdx) => {
-      // Pastikan distractor benar-benar bersih, tanpa newline, dan tidak duplikat dengan correctText
       const cleanCorrect = item.correctText.replace(/[\r\n]+/g, ' ').trim();
       const seenOptions = new Set([cleanCorrect.toLowerCase()]);
       const validDistractors = [];
 
       const fallbackPool = [
-        'Karakteristik sekunder yang bekerja pada kondisi lingkungan spesifik.',
-        'Mekanisme pendukung yang aktif pada tahap transisi sistem.',
-        'Parameter acuan yang digunakan dalam proses identifikasi lanjutan.',
-        'Unsur penyeimbang yang menjaga stabilitas kondisi materi.'
+        'Karakteristik sekunder pada kondisi spesifik.',
+        'Mekanisme pendukung pada tahap transisi.',
+        'Parameter acuan dalam proses lanjutan.',
+        'Unsur penyeimbang kestabilan materi.'
       ];
 
       for (const d of (item.distractors || [])) {
@@ -4084,4 +4007,3 @@ PANDUAN MUTLAK REVIEW MATERI (BERDASARKAN HASIL CHAT BERSAMA):
     });
   }
 }
-
